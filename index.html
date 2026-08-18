@@ -1,0 +1,2005 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendario de Lavado de Tazas — Oficina Ourense</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#294A42">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tazas">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --bg:#F1F4EF;
+  --surface:#FFFFFF;
+  --surface-muted:#EAEDE4;
+  --ink:#20291F;
+  --ink-soft:#5B6759;
+  --ink-faint:#8E9A8A;
+  --border:#DCE2D5;
+  --border-soft:#E7EBE1;
+  --accent:#3E6259;
+  --accent-dark:#294A42;
+  --accent-soft:#E2ECE7;
+  --warn:#A9573A;
+  --warn-soft:#F5E3DB;
+  --gold:#96762C;
+  --gold-soft:#F1EBD8;
+  --weekend-bg:#F7F8F5;
+  --radius-sm:8px;
+  --radius-md:14px;
+  --radius-lg:20px;
+  --shadow-sm:0 1px 2px rgba(32,41,31,0.07);
+  --shadow-md:0 6px 24px rgba(32,41,31,0.10);
+  --font-sans:"Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --font-display: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font-sans);
+  font-size:14px;
+  line-height:1.4;
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;}
+h1,h2,h3{margin:0;font-family:var(--font-display);font-weight:600;}
+
+/* ---------- HEADER ---------- */
+.topbar{
+  position:relative;
+  overflow:hidden;
+  background:linear-gradient(135deg,var(--accent-dark),var(--accent) 70%);
+  color:#F4F7F3;
+  padding:22px 28px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+  flex-wrap:wrap;
+}
+.topbar::before{
+  content:"";
+  position:absolute;
+  right:-40px;
+  top:-60px;
+  width:220px;
+  height:220px;
+  border-radius:50%;
+  border:26px solid rgba(255,255,255,0.07);
+}
+.topbar::after{
+  content:"";
+  position:absolute;
+  right:70px;
+  bottom:-90px;
+  width:160px;
+  height:160px;
+  border-radius:50%;
+  border:18px solid rgba(255,255,255,0.06);
+}
+.brand{display:flex;align-items:center;gap:14px;position:relative;z-index:1;}
+.brand-mark{
+  width:44px;height:44px;flex:0 0 auto;
+}
+.brand-text h1{font-size:21px;color:#FFFFFF;letter-spacing:0.2px;}
+.brand-text p{margin:2px 0 0;font-size:12.5px;color:rgba(244,247,243,0.78);}
+.topbar-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;position:relative;z-index:1;}
+.year-select{
+  appearance:none;
+  background:rgba(255,255,255,0.14);
+  color:#fff;
+  border:1px solid rgba(255,255,255,0.35);
+  border-radius:var(--radius-sm);
+  padding:9px 34px 9px 14px;
+  font-size:14px;
+  font-weight:600;
+  cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 10px center;
+  background-size:15px;
+}
+.year-select:focus-visible, button:focus-visible, .day-cell:focus-visible, input:focus-visible{
+  outline:2px solid #fff;
+  outline-offset:2px;
+}
+.btn{
+  border-radius:var(--radius-sm);
+  border:1px solid transparent;
+  padding:9px 16px;
+  font-size:13.5px;
+  font-weight:600;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  transition:transform .12s ease, box-shadow .12s ease, background .12s ease;
+  white-space:nowrap;
+}
+.btn:active{transform:translateY(1px);}
+.btn-ghost-light{background:rgba(255,255,255,0.12);color:#fff;border-color:rgba(255,255,255,0.4);}
+.btn-ghost-light:hover{background:rgba(255,255,255,0.22);}
+.btn-primary-light{background:#FFFFFF;color:var(--accent-dark);}
+.btn-primary-light:hover{box-shadow:var(--shadow-md);}
+.btn-solid{background:var(--accent);color:#fff;}
+.btn-solid:hover{background:var(--accent-dark);}
+.btn-outline{background:transparent;color:var(--accent-dark);border-color:var(--border);}
+.btn-outline:hover{background:var(--accent-soft);}
+.btn-danger{background:transparent;color:var(--warn);border-color:var(--warn-soft);}
+.btn-danger:hover{background:var(--warn-soft);}
+.btn-danger-solid{background:var(--warn);color:#fff;}
+.btn-danger-solid:hover{background:#8C4229;}
+.btn-sm{padding:6px 11px;font-size:12.5px;border-radius:7px;}
+.btn:disabled{opacity:0.45;cursor:not-allowed;}
+
+/* ---------- LAYOUT ---------- */
+.app-layout{display:flex;align-items:flex-start;gap:22px;padding:22px 28px 60px;max-width:1560px;margin:0 auto;}
+.sidebar{
+  width:290px;
+  flex:0 0 290px;
+  background:var(--surface);
+  border:1px solid var(--border-soft);
+  border-radius:var(--radius-lg);
+  padding:18px;
+  box-shadow:var(--shadow-sm);
+  position:sticky;
+  top:18px;
+}
+.sidebar h2{font-size:13px;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);font-family:var(--font-sans);font-weight:700;margin-bottom:12px;}
+.people-list{display:flex;flex-direction:column;gap:10px;margin-bottom:14px;}
+.person-card{
+  border:1px solid var(--border-soft);
+  border-radius:var(--radius-md);
+  padding:11px 12px;
+  background:var(--surface);
+  transition:outline .12s ease, opacity .12s ease;
+}
+.person-card.dragging{opacity:0.45;}
+.person-card.drag-over{outline:2px dashed var(--accent);outline-offset:2px;}
+.person-row{display:flex;align-items:center;gap:9px;}
+.drag-handle{
+  flex:0 0 auto;
+  width:16px;
+  text-align:center;
+  font-size:15px;
+  line-height:1;
+  color:var(--ink-faint);
+  cursor:grab;
+  user-select:none;
+}
+.drag-handle:active{cursor:grabbing;}
+.person-color-input{
+  width:28px;height:28px;border-radius:8px;border:1px solid var(--border);
+  padding:0;cursor:pointer;flex:0 0 auto;background:none;
+}
+.person-name-input{
+  flex:1;
+  border:1px solid transparent;
+  background:transparent;
+  font-weight:600;
+  font-size:14px;
+  color:var(--ink);
+  padding:5px 6px;
+  border-radius:6px;
+  min-width:0;
+}
+.person-name-input:hover, .person-name-input:focus{border-color:var(--border);background:var(--surface-muted);outline:none;}
+.person-actions{display:flex;gap:6px;margin-top:9px;}
+.add-person-row{display:flex;gap:7px;margin-top:4px;}
+.add-person-row input{
+  flex:1;border:1px solid var(--border);border-radius:8px;padding:9px 10px;font-size:13.5px;color:var(--ink);
+}
+.add-person-row input:focus{outline:2px solid var(--accent-soft);border-color:var(--accent);}
+.sidebar-hint{font-size:12px;color:var(--ink-faint);margin-top:10px;line-height:1.5;}
+.absence-count{font-size:11.5px;color:var(--ink-faint);margin-top:2px;}
+
+.main{flex:1;min-width:0;}
+.notice-banner{
+  background:var(--gold-soft);
+  border:1px solid #E4D8AE;
+  color:#6B5620;
+  border-radius:var(--radius-md);
+  padding:11px 15px;
+  font-size:12.8px;
+  margin-bottom:16px;
+  display:flex;
+  gap:9px;
+  align-items:flex-start;
+}
+.empty-state{
+  background:var(--surface);
+  border:1px dashed var(--border);
+  border-radius:var(--radius-lg);
+  padding:60px 30px;
+  text-align:center;
+  color:var(--ink-soft);
+}
+.empty-state h3{font-size:19px;margin-bottom:8px;color:var(--ink);}
+.swap-banner{
+  background:var(--accent-dark);
+  color:#fff;
+  border-radius:var(--radius-md);
+  padding:12px 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:16px;
+  font-size:13.5px;
+  font-weight:600;
+  box-shadow:var(--shadow-sm);
+}
+
+#print-root{background:transparent;}
+.cal-title-block{margin-bottom:16px;}
+.cal-title-block h2{font-size:22px;color:var(--ink);font-weight:700;}
+.cal-title-block p{margin:3px 0 0;font-size:12.5px;color:var(--ink-soft);}
+
+.months-grid{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:16px;
+}
+.month-card{
+  background:var(--surface);
+  border:1px solid var(--border-soft);
+  border-radius:var(--radius-md);
+  padding:12px 12px 14px;
+  box-shadow:var(--shadow-sm);
+}
+.month-title{
+  font-size:13.5px;
+  font-weight:700;
+  color:var(--accent-dark);
+  text-transform:uppercase;
+  letter-spacing:0.6px;
+  margin-bottom:8px;
+  padding-left:2px;
+  font-family:var(--font-sans);
+}
+.dow-row{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:3px;}
+.dow-cell{font-size:9.5px;text-align:center;color:var(--ink-faint);font-weight:700;letter-spacing:0.3px;padding-bottom:3px;}
+.days-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.day-cell{
+  position:relative;
+  min-height:54px;
+  border-radius:6px;
+  border:1px solid transparent;
+  background:var(--surface);
+  padding:3px 3px 2px;
+  text-align:left;
+  font-family:inherit;
+  color:var(--ink);
+  cursor:default;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.day-cell.empty{visibility:hidden;}
+.day-cell.workday{cursor:pointer;border:1px solid var(--border-soft);}
+.day-cell.workday:hover{background:var(--accent-soft);border-color:var(--accent);}
+.day-cell.weekend{background:var(--weekend-bg);color:var(--ink-faint);}
+.day-cell.holiday{cursor:pointer;border:1px solid var(--border-soft);}
+.day-cell.holiday.level-nacional{background:#EEF0EC;}
+.day-cell.holiday.level-autonomico{background:var(--gold-soft);}
+.day-cell.holiday.level-local{background:var(--accent-soft);}
+.day-cell.today-marker{box-shadow:inset 0 0 0 2px var(--accent-dark);}
+.day-num{font-size:10.5px;font-weight:700;color:var(--ink-soft);}
+.day-cell.holiday .day-num{color:var(--ink);}
+.day-person{
+  font-size:9.8px;
+  font-weight:700;
+  margin-top:2px;
+  line-height:1.15;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.day-note{
+  font-size:7.6px;
+  color:var(--ink-faint);
+  font-weight:600;
+  letter-spacing:0.15px;
+  margin-top:auto;
+  line-height:1.1;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.day-note + .day-note{margin-top:1px;}
+.day-note.note-missed{color:var(--warn);}
+.day-note.note-substitute{color:var(--accent-dark);}
+.day-note.note-swap{color:var(--accent-dark);}
+.day-note.note-manual{color:var(--gold);font-style:italic;}
+.day-cell.missed-x::before{
+  content:"✕";
+  position:absolute;
+  top:2px;right:3px;
+  font-size:9px;
+  color:var(--warn);
+  font-weight:900;
+}
+
+.holiday-label{
+  font-size:7.4px;
+  color:var(--ink-soft);
+  font-weight:700;
+  margin-top:2px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.holiday-tag{
+  position:absolute;top:2px;right:3px;
+  font-size:7px;font-weight:800;
+  width:12px;height:12px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;
+}
+.holiday-tag.level-nacional{background:#6B7A67;}
+.holiday-tag.level-autonomico{background:var(--gold);}
+.holiday-tag.level-local{background:var(--accent);}
+
+/* ---------- LEGEND ---------- */
+.legend{
+  margin-top:20px;
+  background:var(--surface);
+  border:1px solid var(--border-soft);
+  border-radius:var(--radius-md);
+  padding:14px 18px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:16px;
+  align-items:center;
+  box-shadow:var(--shadow-sm);
+}
+.legend-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--ink-faint);font-weight:700;margin-right:6px;}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--ink);}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto;}
+.legend-keys{display:flex;gap:12px;margin-left:auto;font-size:11px;color:var(--ink-faint);}
+.legend-key{display:flex;align-items:center;gap:4px;}
+.legend-key-badge{width:11px;height:11px;border-radius:50%;color:#fff;font-size:6.6px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+
+/* ---------- OVERLAY / MODALS ---------- */
+.overlay{
+  position:fixed;inset:0;background:rgba(20,26,18,0.42);
+  display:flex;align-items:center;justify-content:center;z-index:60;padding:18px;
+}
+.overlay[hidden]{display:none;}
+.modal{
+  background:var(--surface);
+  border-radius:var(--radius-lg);
+  padding:22px;
+  width:100%;
+  max-width:380px;
+  box-shadow:var(--shadow-md);
+  max-height:88vh;
+  overflow-y:auto;
+}
+.modal h3{font-size:17px;margin-bottom:3px;}
+.modal .modal-sub{font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;}
+.modal-actions{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
+.modal-actions .btn{justify-content:center;width:100%;}
+.modal-close-row{display:flex;justify-content:flex-end;margin-top:14px;}
+.modal-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:20px;
+  margin-bottom:12px;
+}
+.modal-badge.missed{background:var(--warn-soft);color:var(--warn);}
+.modal-badge.swap{background:var(--accent-soft);color:var(--accent-dark);}
+.modal-badge.recovery{background:var(--gold-soft);color:var(--gold);}
+
+/* Absence modal */
+.absence-modal{max-width:640px;}
+.absence-toolbar{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;padding:12px;background:var(--surface-muted);border-radius:var(--radius-md);}
+.absence-toolbar label{font-size:11px;color:var(--ink-soft);font-weight:700;display:block;margin-bottom:4px;}
+.absence-toolbar input[type=date]{border:1px solid var(--border);border-radius:7px;padding:7px 8px;font-size:13px;}
+.absence-months{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-height:48vh;overflow-y:auto;padding:2px;}
+.mini-month{border:1px solid var(--border-soft);border-radius:10px;padding:8px;}
+.mini-month-title{font-size:11px;font-weight:700;text-align:center;margin-bottom:6px;color:var(--ink-soft);}
+.mini-dow{display:grid;grid-template-columns:repeat(7,1fr);}
+.mini-dow span{font-size:8px;text-align:center;color:var(--ink-faint);}
+.mini-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.mini-day{
+  aspect-ratio:1;border:none;background:transparent;border-radius:5px;font-size:9.5px;
+  color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.mini-day.empty{visibility:hidden;cursor:default;}
+.mini-day:hover:not(.empty){background:var(--accent-soft);}
+.mini-day.selected{background:var(--accent);color:#fff;font-weight:700;}
+.mini-day.weekend-day{color:var(--ink-faint);}
+.absence-count-line{font-size:12.5px;color:var(--ink-soft);margin-bottom:10px;}
+
+/* Confirm modal */
+.confirm-modal p{font-size:13.5px;color:var(--ink-soft);margin-bottom:4px;}
+
+/* Toasts */
+#toast-container{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:80;display:flex;flex-direction:column;gap:8px;align-items:center;}
+.toast{
+  background:var(--accent-dark);color:#fff;padding:10px 18px;border-radius:30px;font-size:13px;font-weight:600;
+  box-shadow:var(--shadow-md);opacity:0;transform:translateY(10px);transition:opacity .25s ease, transform .25s ease;
+}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.toast-warn{background:var(--warn);}
+
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width:1180px){
+  .months-grid{grid-template-columns:repeat(2,1fr);}
+}
+@media (max-width:900px){
+  .app-layout{flex-direction:column;padding:16px;}
+  .sidebar{width:100%;flex:1 1 auto;position:static;order:-1;}
+  .absence-months{grid-template-columns:repeat(2,1fr);}
+}
+@media (max-width:620px){
+  .months-grid{grid-template-columns:1fr;}
+  .topbar{padding:16px;}
+  .brand-text h1{font-size:17px;}
+  .day-cell{min-height:52px;}
+  .day-person{font-size:10.5px;}
+}
+
+/* Print-capture width lock (used while generating the PDF canvas).
+   Disposición en 2 columnas x 6 filas para que el calendario se rellene
+   en vertical y encaje en una página DIN A4 en orientación vertical. */
+#print-root.pdf-capture{width:900px;}
+#print-root.pdf-capture .months-grid{grid-template-columns:repeat(2,1fr);gap:12px;}
+#print-root.pdf-capture .day-cell{min-height:50px;}
+#print-root.pdf-capture .day-person{font-size:10px;}
+#print-root.pdf-capture .day-note, #print-root.pdf-capture .holiday-label{font-size:7.8px;}
+</style>
+</head>
+<body>
+
+<!-- ESTADO INCRUSTADO: al pulsar "GUARDAR CAMBIOS" se regenera este bloque con
+     el estado actual de la aplicación (personas, colores, ausencias, incidencias,
+     intercambios, año...). Si este bloque contiene datos ("__hasData": true), la
+     aplicación se abre siempre con ese estado, sea cual sea el ordenador donde se
+     abra el archivo. Si está vacío, se usa localStorage como respaldo local. -->
+<script type="application/json" id="embedded-state">{"__hasData":true,"people":[{"id":"p_mssn7hwwc0gub","name":"Dani","color":"#a6e8b3"},{"id":"p_mssn7kmnoi3u7","name":"Noa","color":"#ebb2e0"},{"id":"p_mssn7sfrfpmmg","name":"Andrés","color":"#a0c0f3"},{"id":"p_mssn7ucvqfo1j","name":"David","color":"#f7cb8d"}],"absences":{"p_mssn7ucvqfo1j":[],"p_mssn7sfrfpmmg":["2026-11-09","2026-11-10","2026-11-02","2026-11-03","2026-11-04","2026-11-05","2026-11-06"],"p_mssn7kmnoi3u7":["2026-08-31","2026-09-01","2026-09-02","2026-09-03","2026-09-04","2026-10-05","2026-10-06","2026-10-07","2026-10-08","2026-10-09"]},"missed":{},"swaps":[],"dayOverrides":{},"sequenceAnchors":[{"date":"2026-08-13","personId":"p_mssn7sfrfpmmg"}],"year":2026}</script>
+
+<div id="toast-container" aria-live="polite"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M10 18h22v10a11 11 0 0 1-11 11h0A11 11 0 0 1 10 28V18Z" stroke="#F4F7F3" stroke-width="2.4" fill="rgba(255,255,255,0.12)"></path>
+      <path d="M32 21h3a5 5 0 0 1 0 10h-3" stroke="#F4F7F3" stroke-width="2.4"></path>
+      <path d="M15 12c0-2 2-2 2-4M21 12c0-2 2-2 2-4M27 12c0-2 2-2 2-4" stroke="#F4F7F3" stroke-width="2" stroke-linecap="round"></path>
+    </svg>
+    <div class="brand-text">
+      <h1>Calendario de lavado de tazas</h1>
+      <p>Oficina · Ourense, Galicia</p>
+    </div>
+  </div>
+  <div class="topbar-controls">
+    <select id="year-select" class="year-select" aria-label="Año"><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option><option value="2030">2030</option><option value="2031">2031</option><option value="2032">2032</option></select>
+    <button class="btn btn-ghost-light" id="btn-toggle-people" type="button">Personas</button>
+    <button class="btn btn-primary-light" id="btn-export-pdf" type="button">Guardar PDF</button>
+    <button class="btn btn-primary-light" id="btn-save-html" type="button">💾 GUARDAR CAMBIOS</button>
+    <button class="btn btn-ghost-light" id="btn-reset" type="button">🗑 BORRAR DATOS</button>
+  </div>
+</header>
+
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <h2>Personas</h2>
+    <div class="people-list" id="people-list"><div class="person-card" data-person-id="p_mssn7hwwc0gub"><div class="person-row"><span class="drag-handle" title="Arrastra para reordenar" aria-hidden="true" draggable="true">⠿</span><input type="color" class="person-color-input" aria-label="Color de Dani"><input type="text" class="person-name-input" maxlength="40" aria-label="Nombre"></div><div class="absence-count">0 ausencias registradas</div><div class="person-actions"><button type="button" class="btn btn-outline btn-sm">Ausencias</button><button type="button" class="btn btn-danger btn-sm">Eliminar</button></div></div><div class="person-card" data-person-id="p_mssn7kmnoi3u7"><div class="person-row"><span class="drag-handle" title="Arrastra para reordenar" aria-hidden="true" draggable="true">⠿</span><input type="color" class="person-color-input" aria-label="Color de Noa"><input type="text" class="person-name-input" maxlength="40" aria-label="Nombre"></div><div class="absence-count">10 ausencias registradas</div><div class="person-actions"><button type="button" class="btn btn-outline btn-sm">Ausencias</button><button type="button" class="btn btn-danger btn-sm">Eliminar</button></div></div><div class="person-card" data-person-id="p_mssn7sfrfpmmg"><div class="person-row"><span class="drag-handle" title="Arrastra para reordenar" aria-hidden="true" draggable="true">⠿</span><input type="color" class="person-color-input" aria-label="Color de Andrés"><input type="text" class="person-name-input" maxlength="40" aria-label="Nombre"></div><div class="absence-count">7 ausencias registradas</div><div class="person-actions"><button type="button" class="btn btn-outline btn-sm">Ausencias</button><button type="button" class="btn btn-danger btn-sm">Eliminar</button></div></div><div class="person-card" data-person-id="p_mssn7ucvqfo1j"><div class="person-row"><span class="drag-handle" title="Arrastra para reordenar" aria-hidden="true" draggable="true">⠿</span><input type="color" class="person-color-input" aria-label="Color de David"><input type="text" class="person-name-input" maxlength="40" aria-label="Nombre"></div><div class="absence-count">0 ausencias registradas</div><div class="person-actions"><button type="button" class="btn btn-outline btn-sm">Ausencias</button><button type="button" class="btn btn-danger btn-sm">Eliminar</button></div></div></div>
+    <div class="add-person-row">
+      <input type="text" id="new-person-name" placeholder="Nombre de la persona" maxlength="40" aria-label="Nombre de la nueva persona">
+      <button class="btn btn-solid btn-sm" id="btn-add-person" type="button">Añadir</button>
+    </div>
+    <p class="sidebar-hint">Arrastra el icono ⠿ de cada persona para reordenar la lista: la rotación del calendario sigue ese mismo orden. Añade a cada persona sus ausencias para que el calendario las tenga en cuenta.</p>
+  </aside>
+
+  <main class="main">
+    <div id="notice-banner" class="notice-banner" hidden=""></div>
+
+    <div id="swap-banner" class="swap-banner" hidden="">
+      <span id="swap-banner-text">Selecciona otro día para realizar el intercambio.</span>
+      <button class="btn btn-ghost-light" id="btn-cancel-swap" type="button" style="background:rgba(255,255,255,0.18);">Cancelar</button>
+    </div>
+
+    <div id="empty-state" class="empty-state" hidden="">
+      <h3>Añade al menos una persona para generar el calendario.</h3>
+      <p>Usa el panel «Personas» para crear la lista de la oficina y sus turnos.</p>
+    </div>
+
+    <div id="print-root">
+      <div class="cal-title-block">
+        <h2 id="cal-title">Calendario de lavado — 2026</h2>
+        <p id="cal-subtitle">Ourense, Galicia · turnos de lunes a viernes</p>
+      </div>
+      <div class="months-grid" id="months-grid"><div class="month-card"><div class="month-title">Enero</div><div class="dow-row"><div class="dow-cell">LUN</div><div class="dow-cell">MAR</div><div class="dow-cell">MIÉ</div><div class="dow-cell">JUE</div><div class="dow-cell">VIE</div><div class="dow-cell">SÁB</div><div class="dow-cell">DOM</div></div><div class="days-grid"><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell empty"></div><button class="day-cell holiday level-nacional" data-date="2026-01-01" type="button" title="Año Nuevo"><div class="day-num">1</div><div class="holiday-tag level-nacional">N</div><div class="holiday-label">Año Nuevo</div></button><button class="day-cell workday" data-date="2026-01-02" type="button"><div class="day-num">2</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><div class="day-cell weekend" data-date="2026-01-03" title="Fin de semana"><div class="day-num">3</div></div><div class="day-cell weekend" data-date="2026-01-04" title="Fin de semana"><div class="day-num">4</div></div><button class="day-cell workday" data-date="2026-01-05" type="button"><div class="day-num">5</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell holiday level-nacional" data-date="2026-01-06" type="button" title="Epifanía del Señor (Reyes)"><div class="day-num">6</div><div class="holiday-tag level-nacional">N</div><div class="holiday-label">Epifanía del Señor (Reyes)</div></button><button class="day-cell workday" data-date="2026-01-07" type="button"><div class="day-num">7</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-01-08" type="button"><div class="day-num">8</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-01-09" type="button"><div class="day-num">9</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><div class="day-cell weekend" data-date="2026-01-10" title="Fin de semana"><div class="day-num">10</div></div><div class="day-cell weekend" data-date="2026-01-11" title="Fin de semana"><div class="day-num">11</div></div><button class="day-cell workday" data-date="2026-01-12" type="button"><div class="day-num">12</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-01-13" type="button"><div class="day-num">13</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-01-14" type="button"><div class="day-num">14</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-01-15" type="button"><div class="day-num">15</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-01-16" type="button"><div class="day-num">16</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><div class="day-cell weekend" data-date="2026-01-17" title="Fin de semana"><div class="day-num">17</div></div><div class="day-cell weekend" data-date="2026-01-18" title="Fin de semana"><div class="day-num">18</div></div><button class="day-cell workday" data-date="2026-01-19" type="button"><div class="day-num">19</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-01-20" type="button"><div class="day-num">20</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-01-21" type="button"><div class="day-num">21</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-01-22" type="button"><div class="day-num">22</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-01-23" type="button"><div class="day-num">23</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><div class="day-cell weekend" data-date="2026-01-24" title="Fin de semana"><div class="day-num">24</div></div><div class="day-cell weekend" data-date="2026-01-25" title="Fin de semana"><div class="day-num">25</div></div><button class="day-cell workday" data-date="2026-01-26" type="button"><div class="day-num">26</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-01-27" type="button"><div class="day-num">27</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-01-28" type="button"><div class="day-num">28</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-01-29" type="button"><div class="day-num">29</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-01-30" type="button"><div class="day-num">30</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><div class="day-cell weekend" data-date="2026-01-31" title="Fin de semana"><div class="day-num">31</div></div></div></div><div class="month-card"><div class="month-title">Febrero</div><div class="dow-row"><div class="dow-cell">LUN</div><div class="dow-cell">MAR</div><div class="dow-cell">MIÉ</div><div class="dow-cell">JUE</div><div class="dow-cell">VIE</div><div class="dow-cell">SÁB</div><div class="dow-cell">DOM</div></div><div class="days-grid"><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell weekend" data-date="2026-02-01" title="Fin de semana"><div class="day-num">1</div></div><button class="day-cell workday" data-date="2026-02-02" type="button"><div class="day-num">2</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-02-03" type="button"><div class="day-num">3</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-02-04" type="button"><div class="day-num">4</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-02-05" type="button"><div class="day-num">5</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-02-06" type="button"><div class="day-num">6</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><div class="day-cell weekend" data-date="2026-02-07" title="Fin de semana"><div class="day-num">7</div></div><div class="day-cell weekend" data-date="2026-02-08" title="Fin de semana"><div class="day-num">8</div></div><button class="day-cell workday" data-date="2026-02-09" type="button"><div class="day-num">9</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-02-10" type="button"><div class="day-num">10</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-02-11" type="button"><div class="day-num">11</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-02-12" type="button"><div class="day-num">12</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-02-13" type="button"><div class="day-num">13</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><div class="day-cell weekend" data-date="2026-02-14" title="Fin de semana"><div class="day-num">14</div></div><div class="day-cell weekend" data-date="2026-02-15" title="Fin de semana"><div class="day-num">15</div></div><button class="day-cell workday" data-date="2026-02-16" type="button"><div class="day-num">16</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell holiday level-local" data-date="2026-02-17" type="button" title="Martes de Carnaval"><div class="day-num">17</div><div class="holiday-tag level-local">L</div><div class="holiday-label">Martes de Carnaval</div></button><button class="day-cell workday" data-date="2026-02-18" type="button"><div class="day-num">18</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-02-19" type="button"><div class="day-num">19</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-02-20" type="button"><div class="day-num">20</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><div class="day-cell weekend" data-date="2026-02-21" title="Fin de semana"><div class="day-num">21</div></div><div class="day-cell weekend" data-date="2026-02-22" title="Fin de semana"><div class="day-num">22</div></div><button class="day-cell workday" data-date="2026-02-23" type="button"><div class="day-num">23</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-02-24" type="button"><div class="day-num">24</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-02-25" type="button"><div class="day-num">25</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-02-26" type="button"><div class="day-num">26</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-02-27" type="button"><div class="day-num">27</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><div class="day-cell weekend" data-date="2026-02-28" title="Fin de semana"><div class="day-num">28</div></div></div></div><div class="month-card"><div class="month-title">Marzo</div><div class="dow-row"><div class="dow-cell">LUN</div><div class="dow-cell">MAR</div><div class="dow-cell">MIÉ</div><div class="dow-cell">JUE</div><div class="dow-cell">VIE</div><div class="dow-cell">SÁB</div><div class="dow-cell">DOM</div></div><div class="days-grid"><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell weekend" data-date="2026-03-01" title="Fin de semana"><div class="day-num">1</div></div><button class="day-cell workday" data-date="2026-03-02" type="button"><div class="day-num">2</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-03-03" type="button"><div class="day-num">3</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-03-04" type="button"><div class="day-num">4</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-03-05" type="button"><div class="day-num">5</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-03-06" type="button"><div class="day-num">6</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><div class="day-cell weekend" data-date="2026-03-07" title="Fin de semana"><div class="day-num">7</div></div><div class="day-cell weekend" data-date="2026-03-08" title="Fin de semana"><div class="day-num">8</div></div><button class="day-cell workday" data-date="2026-03-09" type="button"><div class="day-num">9</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-03-10" type="button"><div class="day-num">10</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-03-11" type="button"><div class="day-num">11</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-03-12" type="button"><div class="day-num">12</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-03-13" type="button"><div class="day-num">13</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><div class="day-cell weekend" data-date="2026-03-14" title="Fin de semana"><div class="day-num">14</div></div><div class="day-cell weekend" data-date="2026-03-15" title="Fin de semana"><div class="day-num">15</div></div><button class="day-cell workday" data-date="2026-03-16" type="button"><div class="day-num">16</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-03-17" type="button"><div class="day-num">17</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-03-18" type="button"><div class="day-num">18</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell holiday level-autonomico" data-date="2026-03-19" type="button" title="San José"><div class="day-num">19</div><div class="holiday-tag level-autonomico">A</div><div class="holiday-label">San José</div></button><button class="day-cell workday" data-date="2026-03-20" type="button"><div class="day-num">20</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><div class="day-cell weekend" data-date="2026-03-21" title="Fin de semana"><div class="day-num">21</div></div><div class="day-cell weekend" data-date="2026-03-22" title="Fin de semana"><div class="day-num">22</div></div><button class="day-cell workday" data-date="2026-03-23" type="button"><div class="day-num">23</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-03-24" type="button"><div class="day-num">24</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-03-25" type="button"><div class="day-num">25</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-03-26" type="button"><div class="day-num">26</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-03-27" type="button"><div class="day-num">27</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><div class="day-cell weekend" data-date="2026-03-28" title="Fin de semana"><div class="day-num">28</div></div><div class="day-cell weekend" data-date="2026-03-29" title="Fin de semana"><div class="day-num">29</div></div><button class="day-cell workday" data-date="2026-03-30" type="button"><div class="day-num">30</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-03-31" type="button"><div class="day-num">31</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button></div></div><div class="month-card"><div class="month-title">Abril</div><div class="dow-row"><div class="dow-cell">LUN</div><div class="dow-cell">MAR</div><div class="dow-cell">MIÉ</div><div class="dow-cell">JUE</div><div class="dow-cell">VIE</div><div class="dow-cell">SÁB</div><div class="dow-cell">DOM</div></div><div class="days-grid"><div class="day-cell empty"></div><div class="day-cell empty"></div><button class="day-cell workday" data-date="2026-04-01" type="button"><div class="day-num">1</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell holiday level-autonomico" data-date="2026-04-02" type="button" title="Jueves Santo"><div class="day-num">2</div><div class="holiday-tag level-autonomico">A</div><div class="holiday-label">Jueves Santo</div></button><button class="day-cell holiday level-nacional" data-date="2026-04-03" type="button" title="Viernes Santo"><div class="day-num">3</div><div class="holiday-tag level-nacional">N</div><div class="holiday-label">Viernes Santo</div></button><div class="day-cell weekend" data-date="2026-04-04" title="Fin de semana"><div class="day-num">4</div></div><div class="day-cell weekend" data-date="2026-04-05" title="Fin de semana"><div class="day-num">5</div></div><button class="day-cell workday" data-date="2026-04-06" type="button"><div class="day-num">6</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-04-07" type="button"><div class="day-num">7</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-04-08" type="button"><div class="day-num">8</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-04-09" type="button"><div class="day-num">9</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-04-10" type="button"><div class="day-num">10</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><div class="day-cell weekend" data-date="2026-04-11" title="Fin de semana"><div class="day-num">11</div></div><div class="day-cell weekend" data-date="2026-04-12" title="Fin de semana"><div class="day-num">12</div></div><button class="day-cell workday" data-date="2026-04-13" type="button"><div class="day-num">13</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-04-14" type="button"><div class="day-num">14</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-04-15" type="button"><div class="day-num">15</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-04-16" type="button"><div class="day-num">16</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-04-17" type="button"><div class="day-num">17</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><div class="day-cell weekend" data-date="2026-04-18" title="Fin de semana"><div class="day-num">18</div></div><div class="day-cell weekend" data-date="2026-04-19" title="Fin de semana"><div class="day-num">19</div></div><button class="day-cell workday" data-date="2026-04-20" type="button"><div class="day-num">20</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-04-21" type="button"><div class="day-num">21</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-04-22" type="button"><div class="day-num">22</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-04-23" type="button"><div class="day-num">23</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-04-24" type="button"><div class="day-num">24</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><div class="day-cell weekend" data-date="2026-04-25" title="Fin de semana"><div class="day-num">25</div></div><div class="day-cell weekend" data-date="2026-04-26" title="Fin de semana"><div class="day-num">26</div></div><button class="day-cell workday" data-date="2026-04-27" type="button"><div class="day-num">27</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-04-28" type="button"><div class="day-num">28</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-04-29" type="button"><div class="day-num">29</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-04-30" type="button"><div class="day-num">30</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button></div></div><div class="month-card"><div class="month-title">Mayo</div><div class="dow-row"><div class="dow-cell">LUN</div><div class="dow-cell">MAR</div><div class="dow-cell">MIÉ</div><div class="dow-cell">JUE</div><div class="dow-cell">VIE</div><div class="dow-cell">SÁB</div><div class="dow-cell">DOM</div></div><div class="days-grid"><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell empty"></div><button class="day-cell holiday level-nacional" data-date="2026-05-01" type="button" title="Fiesta del Trabajo"><div class="day-num">1</div><div class="holiday-tag level-nacional">N</div><div class="holiday-label">Fiesta del Trabajo</div></button><div class="day-cell weekend" data-date="2026-05-02" title="Fin de semana"><div class="day-num">2</div></div><div class="day-cell weekend" data-date="2026-05-03" title="Fin de semana"><div class="day-num">3</div></div><button class="day-cell workday" data-date="2026-05-04" type="button"><div class="day-num">4</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-05-05" type="button"><div class="day-num">5</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-05-06" type="button"><div class="day-num">6</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-05-07" type="button"><div class="day-num">7</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-05-08" type="button"><div class="day-num">8</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><div class="day-cell weekend" data-date="2026-05-09" title="Fin de semana"><div class="day-num">9</div></div><div class="day-cell weekend" data-date="2026-05-10" title="Fin de semana"><div class="day-num">10</div></div><button class="day-cell workday" data-date="2026-05-11" type="button"><div class="day-num">11</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-05-12" type="button"><div class="day-num">12</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-05-13" type="button"><div class="day-num">13</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-05-14" type="button"><div class="day-num">14</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-05-15" type="button"><div class="day-num">15</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><div class="day-cell weekend" data-date="2026-05-16" title="Fin de semana"><div class="day-num">16</div></div><div class="day-cell weekend" data-date="2026-05-17" title="Fin de semana"><div class="day-num">17</div></div><button class="day-cell workday" data-date="2026-05-18" type="button"><div class="day-num">18</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-05-19" type="button"><div class="day-num">19</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-05-20" type="button"><div class="day-num">20</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-05-21" type="button"><div class="day-num">21</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-05-22" type="button"><div class="day-num">22</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><div class="day-cell weekend" data-date="2026-05-23" title="Fin de semana"><div class="day-num">23</div></div><div class="day-cell weekend" data-date="2026-05-24" title="Fin de semana"><div class="day-num">24</div></div><button class="day-cell workday" data-date="2026-05-25" type="button"><div class="day-num">25</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-05-26" type="button"><div class="day-num">26</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-05-27" type="button"><div class="day-num">27</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-05-28" type="button"><div class="day-num">28</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-05-29" type="button"><div class="day-num">29</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><div class="day-cell weekend" data-date="2026-05-30" title="Fin de semana"><div class="day-num">30</div></div><div class="day-cell weekend" data-date="2026-05-31" title="Fin de semana"><div class="day-num">31</div></div></div></div><div class="month-card"><div class="month-title">Junio</div><div class="dow-row"><div class="dow-cell">LUN</div><div class="dow-cell">MAR</div><div class="dow-cell">MIÉ</div><div class="dow-cell">JUE</div><div class="dow-cell">VIE</div><div class="dow-cell">SÁB</div><div class="dow-cell">DOM</div></div><div class="days-grid"><button class="day-cell workday" data-date="2026-06-01" type="button"><div class="day-num">1</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-06-02" type="button"><div class="day-num">2</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-06-03" type="button"><div class="day-num">3</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-06-04" type="button"><div class="day-num">4</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-06-05" type="button"><div class="day-num">5</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><div class="day-cell weekend" data-date="2026-06-06" title="Fin de semana"><div class="day-num">6</div></div><div class="day-cell weekend" data-date="2026-06-07" title="Fin de semana"><div class="day-num">7</div></div><button class="day-cell workday" data-date="2026-06-08" type="button"><div class="day-num">8</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-06-09" type="button"><div class="day-num">9</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-06-10" type="button"><div class="day-num">10</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-06-11" type="button"><div class="day-num">11</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-06-12" type="button"><div class="day-num">12</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><div class="day-cell weekend" data-date="2026-06-13" title="Fin de semana"><div class="day-num">13</div></div><div class="day-cell weekend" data-date="2026-06-14" title="Fin de semana"><div class="day-num">14</div></div><button class="day-cell workday" data-date="2026-06-15" type="button"><div class="day-num">15</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-06-16" type="button"><div class="day-num">16</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-06-17" type="button"><div class="day-num">17</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-06-18" type="button"><div class="day-num">18</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-06-19" type="button"><div class="day-num">19</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><div class="day-cell weekend" data-date="2026-06-20" title="Fin de semana"><div class="day-num">20</div></div><div class="day-cell weekend" data-date="2026-06-21" title="Fin de semana"><div class="day-num">21</div></div><button class="day-cell workday" data-date="2026-06-22" type="button"><div class="day-num">22</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-06-23" type="button"><div class="day-num">23</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell holiday level-autonomico" data-date="2026-06-24" type="button" title="San Xoán"><div class="day-num">24</div><div class="holiday-tag level-autonomico">A</div><div class="holiday-label">San Xoán</div></button><button class="day-cell workday" data-date="2026-06-25" type="button"><div class="day-num">25</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-06-26" type="button"><div class="day-num">26</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><div class="day-cell weekend" data-date="2026-06-27" title="Fin de semana"><div class="day-num">27</div></div><div class="day-cell weekend" data-date="2026-06-28" title="Fin de semana"><div class="day-num">28</div></div><button class="day-cell workday" data-date="2026-06-29" type="button"><div class="day-num">29</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-06-30" type="button"><div class="day-num">30</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button></div></div><div class="month-card"><div class="month-title">Julio</div><div class="dow-row"><div class="dow-cell">LUN</div><div class="dow-cell">MAR</div><div class="dow-cell">MIÉ</div><div class="dow-cell">JUE</div><div class="dow-cell">VIE</div><div class="dow-cell">SÁB</div><div class="dow-cell">DOM</div></div><div class="days-grid"><div class="day-cell empty"></div><div class="day-cell empty"></div><button class="day-cell workday" data-date="2026-07-01" type="button"><div class="day-num">1</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-07-02" type="button"><div class="day-num">2</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-07-03" type="button"><div class="day-num">3</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><div class="day-cell weekend" data-date="2026-07-04" title="Fin de semana"><div class="day-num">4</div></div><div class="day-cell weekend" data-date="2026-07-05" title="Fin de semana"><div class="day-num">5</div></div><button class="day-cell workday" data-date="2026-07-06" type="button"><div class="day-num">6</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-07-07" type="button"><div class="day-num">7</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-07-08" type="button"><div class="day-num">8</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-07-09" type="button"><div class="day-num">9</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-07-10" type="button"><div class="day-num">10</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><div class="day-cell weekend" data-date="2026-07-11" title="Fin de semana"><div class="day-num">11</div></div><div class="day-cell weekend" data-date="2026-07-12" title="Fin de semana"><div class="day-num">12</div></div><button class="day-cell workday" data-date="2026-07-13" type="button"><div class="day-num">13</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-07-14" type="button"><div class="day-num">14</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-07-15" type="button"><div class="day-num">15</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-07-16" type="button"><div class="day-num">16</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-07-17" type="button"><div class="day-num">17</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><div class="day-cell weekend" data-date="2026-07-18" title="Fin de semana"><div class="day-num">18</div></div><div class="day-cell weekend" data-date="2026-07-19" title="Fin de semana"><div class="day-num">19</div></div><button class="day-cell workday" data-date="2026-07-20" type="button"><div class="day-num">20</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-07-21" type="button"><div class="day-num">21</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-07-22" type="button"><div class="day-num">22</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-07-23" type="button"><div class="day-num">23</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-07-24" type="button"><div class="day-num">24</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell holiday level-autonomico" data-date="2026-07-25" type="button" title="Día Nacional de Galicia"><div class="day-num">25</div><div class="holiday-tag level-autonomico">A</div><div class="holiday-label">Día Nacional de Galicia</div></button><div class="day-cell weekend" data-date="2026-07-26" title="Fin de semana"><div class="day-num">26</div></div><button class="day-cell workday" data-date="2026-07-27" type="button"><div class="day-num">27</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-07-28" type="button"><div class="day-num">28</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-07-29" type="button"><div class="day-num">29</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-07-30" type="button"><div class="day-num">30</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-07-31" type="button"><div class="day-num">31</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button></div></div><div class="month-card"><div class="month-title">Agosto</div><div class="dow-row"><div class="dow-cell">LUN</div><div class="dow-cell">MAR</div><div class="dow-cell">MIÉ</div><div class="dow-cell">JUE</div><div class="dow-cell">VIE</div><div class="dow-cell">SÁB</div><div class="dow-cell">DOM</div></div><div class="days-grid"><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell weekend" data-date="2026-08-01" title="Fin de semana"><div class="day-num">1</div></div><div class="day-cell weekend" data-date="2026-08-02" title="Fin de semana"><div class="day-num">2</div></div><button class="day-cell workday" data-date="2026-08-03" type="button"><div class="day-num">3</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-08-04" type="button"><div class="day-num">4</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-08-05" type="button"><div class="day-num">5</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-08-06" type="button"><div class="day-num">6</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-08-07" type="button"><div class="day-num">7</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><div class="day-cell weekend" data-date="2026-08-08" title="Fin de semana"><div class="day-num">8</div></div><div class="day-cell weekend" data-date="2026-08-09" title="Fin de semana"><div class="day-num">9</div></div><button class="day-cell workday" data-date="2026-08-10" type="button"><div class="day-num">10</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-08-11" type="button"><div class="day-num">11</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-08-12" type="button"><div class="day-num">12</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-08-13" type="button"><div class="day-num">13</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell today-marker workday" data-date="2026-08-14" type="button"><div class="day-num">14</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell holiday level-nacional" data-date="2026-08-15" type="button" title="Asunción de la Virgen"><div class="day-num">15</div><div class="holiday-tag level-nacional">N</div><div class="holiday-label">Asunción de la Virgen</div></button><div class="day-cell weekend" data-date="2026-08-16" title="Fin de semana"><div class="day-num">16</div></div><button class="day-cell workday" data-date="2026-08-17" type="button"><div class="day-num">17</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-08-18" type="button"><div class="day-num">18</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-08-19" type="button"><div class="day-num">19</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-08-20" type="button"><div class="day-num">20</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-08-21" type="button"><div class="day-num">21</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><div class="day-cell weekend" data-date="2026-08-22" title="Fin de semana"><div class="day-num">22</div></div><div class="day-cell weekend" data-date="2026-08-23" title="Fin de semana"><div class="day-num">23</div></div><button class="day-cell workday" data-date="2026-08-24" type="button"><div class="day-num">24</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-08-25" type="button"><div class="day-num">25</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-08-26" type="button"><div class="day-num">26</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-08-27" type="button"><div class="day-num">27</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-08-28" type="button"><div class="day-num">28</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><div class="day-cell weekend" data-date="2026-08-29" title="Fin de semana"><div class="day-num">29</div></div><div class="day-cell weekend" data-date="2026-08-30" title="Fin de semana"><div class="day-num">30</div></div><button class="day-cell workday" data-date="2026-08-31" type="button"><div class="day-num">31</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button></div></div><div class="month-card"><div class="month-title">Septiembre</div><div class="dow-row"><div class="dow-cell">LUN</div><div class="dow-cell">MAR</div><div class="dow-cell">MIÉ</div><div class="dow-cell">JUE</div><div class="dow-cell">VIE</div><div class="dow-cell">SÁB</div><div class="dow-cell">DOM</div></div><div class="days-grid"><div class="day-cell empty"></div><button class="day-cell workday" data-date="2026-09-01" type="button"><div class="day-num">1</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-09-02" type="button"><div class="day-num">2</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-09-03" type="button"><div class="day-num">3</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-09-04" type="button"><div class="day-num">4</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><div class="day-cell weekend" data-date="2026-09-05" title="Fin de semana"><div class="day-num">5</div></div><div class="day-cell weekend" data-date="2026-09-06" title="Fin de semana"><div class="day-num">6</div></div><button class="day-cell workday" data-date="2026-09-07" type="button"><div class="day-num">7</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-09-08" type="button"><div class="day-num">8</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-09-09" type="button"><div class="day-num">9</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-09-10" type="button"><div class="day-num">10</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-09-11" type="button"><div class="day-num">11</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><div class="day-cell weekend" data-date="2026-09-12" title="Fin de semana"><div class="day-num">12</div></div><div class="day-cell weekend" data-date="2026-09-13" title="Fin de semana"><div class="day-num">13</div></div><button class="day-cell workday" data-date="2026-09-14" type="button"><div class="day-num">14</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-09-15" type="button"><div class="day-num">15</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-09-16" type="button"><div class="day-num">16</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-09-17" type="button"><div class="day-num">17</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-09-18" type="button"><div class="day-num">18</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><div class="day-cell weekend" data-date="2026-09-19" title="Fin de semana"><div class="day-num">19</div></div><div class="day-cell weekend" data-date="2026-09-20" title="Fin de semana"><div class="day-num">20</div></div><button class="day-cell workday" data-date="2026-09-21" type="button"><div class="day-num">21</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-09-22" type="button"><div class="day-num">22</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-09-23" type="button"><div class="day-num">23</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-09-24" type="button"><div class="day-num">24</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-09-25" type="button"><div class="day-num">25</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><div class="day-cell weekend" data-date="2026-09-26" title="Fin de semana"><div class="day-num">26</div></div><div class="day-cell weekend" data-date="2026-09-27" title="Fin de semana"><div class="day-num">27</div></div><button class="day-cell workday" data-date="2026-09-28" type="button"><div class="day-num">28</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-09-29" type="button"><div class="day-num">29</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-09-30" type="button"><div class="day-num">30</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button></div></div><div class="month-card"><div class="month-title">Octubre</div><div class="dow-row"><div class="dow-cell">LUN</div><div class="dow-cell">MAR</div><div class="dow-cell">MIÉ</div><div class="dow-cell">JUE</div><div class="dow-cell">VIE</div><div class="dow-cell">SÁB</div><div class="dow-cell">DOM</div></div><div class="days-grid"><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell empty"></div><button class="day-cell workday" data-date="2026-10-01" type="button"><div class="day-num">1</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-10-02" type="button"><div class="day-num">2</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><div class="day-cell weekend" data-date="2026-10-03" title="Fin de semana"><div class="day-num">3</div></div><div class="day-cell weekend" data-date="2026-10-04" title="Fin de semana"><div class="day-num">4</div></div><button class="day-cell workday" data-date="2026-10-05" type="button"><div class="day-num">5</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-10-06" type="button"><div class="day-num">6</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-10-07" type="button"><div class="day-num">7</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-10-08" type="button"><div class="day-num">8</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-10-09" type="button"><div class="day-num">9</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><div class="day-cell weekend" data-date="2026-10-10" title="Fin de semana"><div class="day-num">10</div></div><div class="day-cell weekend" data-date="2026-10-11" title="Fin de semana"><div class="day-num">11</div></div><button class="day-cell holiday level-nacional" data-date="2026-10-12" type="button" title="Fiesta Nacional de España"><div class="day-num">12</div><div class="holiday-tag level-nacional">N</div><div class="holiday-label">Fiesta Nacional de España</div></button><button class="day-cell workday" data-date="2026-10-13" type="button"><div class="day-num">13</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-10-14" type="button"><div class="day-num">14</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-10-15" type="button"><div class="day-num">15</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-10-16" type="button"><div class="day-num">16</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><div class="day-cell weekend" data-date="2026-10-17" title="Fin de semana"><div class="day-num">17</div></div><div class="day-cell weekend" data-date="2026-10-18" title="Fin de semana"><div class="day-num">18</div></div><button class="day-cell workday" data-date="2026-10-19" type="button"><div class="day-num">19</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-10-20" type="button"><div class="day-num">20</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-10-21" type="button"><div class="day-num">21</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-10-22" type="button"><div class="day-num">22</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-10-23" type="button"><div class="day-num">23</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><div class="day-cell weekend" data-date="2026-10-24" title="Fin de semana"><div class="day-num">24</div></div><div class="day-cell weekend" data-date="2026-10-25" title="Fin de semana"><div class="day-num">25</div></div><button class="day-cell workday" data-date="2026-10-26" type="button"><div class="day-num">26</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-10-27" type="button"><div class="day-num">27</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-10-28" type="button"><div class="day-num">28</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-10-29" type="button"><div class="day-num">29</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-10-30" type="button"><div class="day-num">30</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><div class="day-cell weekend" data-date="2026-10-31" title="Fin de semana"><div class="day-num">31</div></div></div></div><div class="month-card"><div class="month-title">Noviembre</div><div class="dow-row"><div class="dow-cell">LUN</div><div class="dow-cell">MAR</div><div class="dow-cell">MIÉ</div><div class="dow-cell">JUE</div><div class="dow-cell">VIE</div><div class="dow-cell">SÁB</div><div class="dow-cell">DOM</div></div><div class="days-grid"><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell empty"></div><div class="day-cell empty"></div><button class="day-cell holiday level-nacional" data-date="2026-11-01" type="button" title="Todos los Santos"><div class="day-num">1</div><div class="holiday-tag level-nacional">N</div><div class="holiday-label">Todos los Santos</div></button><button class="day-cell workday" data-date="2026-11-02" type="button"><div class="day-num">2</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-11-03" type="button"><div class="day-num">3</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-11-04" type="button"><div class="day-num">4</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-11-05" type="button"><div class="day-num">5</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-11-06" type="button"><div class="day-num">6</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><div class="day-cell weekend" data-date="2026-11-07" title="Fin de semana"><div class="day-num">7</div></div><div class="day-cell weekend" data-date="2026-11-08" title="Fin de semana"><div class="day-num">8</div></div><button class="day-cell workday" data-date="2026-11-09" type="button"><div class="day-num">9</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-11-10" type="button"><div class="day-num">10</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell holiday level-local" data-date="2026-11-11" type="button" title="San Martiño"><div class="day-num">11</div><div class="holiday-tag level-local">L</div><div class="holiday-label">San Martiño</div></button><button class="day-cell workday" data-date="2026-11-12" type="button"><div class="day-num">12</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-11-13" type="button"><div class="day-num">13</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><div class="day-cell weekend" data-date="2026-11-14" title="Fin de semana"><div class="day-num">14</div></div><div class="day-cell weekend" data-date="2026-11-15" title="Fin de semana"><div class="day-num">15</div></div><button class="day-cell workday" data-date="2026-11-16" type="button"><div class="day-num">16</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-11-17" type="button"><div class="day-num">17</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-11-18" type="button"><div class="day-num">18</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-11-19" type="button"><div class="day-num">19</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-11-20" type="button"><div class="day-num">20</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><div class="day-cell weekend" data-date="2026-11-21" title="Fin de semana"><div class="day-num">21</div></div><div class="day-cell weekend" data-date="2026-11-22" title="Fin de semana"><div class="day-num">22</div></div><button class="day-cell workday" data-date="2026-11-23" type="button"><div class="day-num">23</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-11-24" type="button"><div class="day-num">24</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-11-25" type="button"><div class="day-num">25</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-11-26" type="button"><div class="day-num">26</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-11-27" type="button"><div class="day-num">27</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><div class="day-cell weekend" data-date="2026-11-28" title="Fin de semana"><div class="day-num">28</div></div><div class="day-cell weekend" data-date="2026-11-29" title="Fin de semana"><div class="day-num">29</div></div><button class="day-cell workday" data-date="2026-11-30" type="button"><div class="day-num">30</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button></div></div><div class="month-card"><div class="month-title">Diciembre</div><div class="dow-row"><div class="dow-cell">LUN</div><div class="dow-cell">MAR</div><div class="dow-cell">MIÉ</div><div class="dow-cell">JUE</div><div class="dow-cell">VIE</div><div class="dow-cell">SÁB</div><div class="dow-cell">DOM</div></div><div class="days-grid"><div class="day-cell empty"></div><button class="day-cell workday" data-date="2026-12-01" type="button"><div class="day-num">1</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-12-02" type="button"><div class="day-num">2</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-12-03" type="button"><div class="day-num">3</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-12-04" type="button"><div class="day-num">4</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><div class="day-cell weekend" data-date="2026-12-05" title="Fin de semana"><div class="day-num">5</div></div><button class="day-cell holiday level-nacional" data-date="2026-12-06" type="button" title="Día de la Constitución"><div class="day-num">6</div><div class="holiday-tag level-nacional">N</div><div class="holiday-label">Día de la Constitución</div></button><button class="day-cell workday" data-date="2026-12-07" type="button"><div class="day-num">7</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell holiday level-nacional" data-date="2026-12-08" type="button" title="Inmaculada Concepción"><div class="day-num">8</div><div class="holiday-tag level-nacional">N</div><div class="holiday-label">Inmaculada Concepción</div></button><button class="day-cell workday" data-date="2026-12-09" type="button"><div class="day-num">9</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-12-10" type="button"><div class="day-num">10</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-12-11" type="button"><div class="day-num">11</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><div class="day-cell weekend" data-date="2026-12-12" title="Fin de semana"><div class="day-num">12</div></div><div class="day-cell weekend" data-date="2026-12-13" title="Fin de semana"><div class="day-num">13</div></div><button class="day-cell workday" data-date="2026-12-14" type="button"><div class="day-num">14</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell workday" data-date="2026-12-15" type="button"><div class="day-num">15</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-12-16" type="button"><div class="day-num">16</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-12-17" type="button"><div class="day-num">17</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-12-18" type="button"><div class="day-num">18</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><div class="day-cell weekend" data-date="2026-12-19" title="Fin de semana"><div class="day-num">19</div></div><div class="day-cell weekend" data-date="2026-12-20" title="Fin de semana"><div class="day-num">20</div></div><button class="day-cell workday" data-date="2026-12-21" type="button"><div class="day-num">21</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-12-22" type="button"><div class="day-num">22</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-12-23" type="button"><div class="day-num">23</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-12-24" type="button"><div class="day-num">24</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button><button class="day-cell holiday level-nacional" data-date="2026-12-25" type="button" title="Navidad"><div class="day-num">25</div><div class="holiday-tag level-nacional">N</div><div class="holiday-label">Navidad</div></button><div class="day-cell weekend" data-date="2026-12-26" title="Fin de semana"><div class="day-num">26</div></div><div class="day-cell weekend" data-date="2026-12-27" title="Fin de semana"><div class="day-num">27</div></div><button class="day-cell workday" data-date="2026-12-28" type="button"><div class="day-num">28</div><div class="day-person" style="color: rgb(166, 232, 179);">Dani</div></button><button class="day-cell workday" data-date="2026-12-29" type="button"><div class="day-num">29</div><div class="day-person" style="color: rgb(235, 178, 224);">Noa</div></button><button class="day-cell workday" data-date="2026-12-30" type="button"><div class="day-num">30</div><div class="day-person" style="color: rgb(160, 192, 243);">Andrés</div></button><button class="day-cell workday" data-date="2026-12-31" type="button"><div class="day-num">31</div><div class="day-person" style="color: rgb(247, 203, 141);">David</div></button></div></div></div>
+      <div class="legend" id="legend-root">
+        <span class="legend-title">Personas</span>
+        <div id="legend-people" style="display:flex;gap:14px;flex-wrap:wrap;"><div class="legend-item"><span class="legend-dot" style="background: rgb(166, 232, 179);"></span>Dani</div><div class="legend-item"><span class="legend-dot" style="background: rgb(235, 178, 224);"></span>Noa</div><div class="legend-item"><span class="legend-dot" style="background: rgb(160, 192, 243);"></span>Andrés</div><div class="legend-item"><span class="legend-dot" style="background: rgb(247, 203, 141);"></span>David</div></div>
+        <div class="legend-keys">
+          <span class="legend-key"><span class="legend-key-badge" style="background:#6B7A67;">N</span> Nacional</span>
+          <span class="legend-key"><span class="legend-key-badge" style="background:#96762C;">A</span> Autonómico</span>
+          <span class="legend-key"><span class="legend-key-badge" style="background:#3E6259;">L</span> Local</span>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- DAY ACTION MODAL -->
+<div class="overlay" id="day-overlay" hidden="">
+  <div class="modal" id="day-modal" role="dialog" aria-modal="true" aria-labelledby="day-modal-title">
+    <h3 id="day-modal-title">14 de agosto de 2026</h3>
+    <p class="modal-sub" id="day-modal-sub">Asignado: Andrés</p>
+    <div id="day-modal-badges"><span class="modal-badge manual">Secuencia reiniciada desde este día</span></div>
+    <div class="modal-actions" id="day-modal-actions"><button class="btn btn-outline" type="button">No ha lavado</button><button class="btn btn-outline" type="button">Cambiar con...</button><div class="manual-assign-box"><label class="manual-assign-label">Asignar manualmente este día</label><select class="manual-assign-select"><option value="">— Automático (reparto normal) —</option><option value="p_mssn7hwwc0gub">Dani</option><option value="p_mssn7kmnoi3u7">Noa</option><option value="p_mssn7sfrfpmmg">Andrés</option><option value="p_mssn7ucvqfo1j">David</option></select><label class="manual-assign-checkbox-row"><input type="checkbox"> Iniciar secuencia desde esta persona (reordena los turnos a partir de este día)</label><button class="btn btn-solid btn-sm" type="button" style="margin-top: 8px;">Guardar asignación</button></div><button class="btn btn-danger" type="button">Restablecer día</button></div>
+    <div class="modal-close-row">
+      <button class="btn btn-outline btn-sm" id="btn-close-day-modal" type="button">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- HOLIDAY / WEEKEND INFO MODAL -->
+<div class="overlay" id="info-overlay" hidden="">
+  <div class="modal" id="info-modal" role="dialog" aria-modal="true" aria-labelledby="info-modal-title">
+    <h3 id="info-modal-title">—</h3>
+    <p class="modal-sub" id="info-modal-sub">—</p>
+    <div class="modal-close-row">
+      <button class="btn btn-outline btn-sm" id="btn-close-info-modal" type="button">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ABSENCE MODAL -->
+<div class="overlay" id="absence-overlay" hidden="">
+  <div class="modal absence-modal" role="dialog" aria-modal="true" aria-labelledby="absence-modal-title">
+    <h3 id="absence-modal-title">Ausencias de Noa</h3>
+    <p class="modal-sub">Selecciona los días en los que no estará en la oficina. Vuelve a hacer clic para deseleccionar.</p>
+    <div class="absence-toolbar">
+      <div>
+        <label for="range-start">Desde</label>
+        <input type="date" id="range-start">
+      </div>
+      <div>
+        <label for="range-end">Hasta</label>
+        <input type="date" id="range-end">
+      </div>
+      <button class="btn btn-outline btn-sm" id="btn-add-range" type="button">Añadir rango</button>
+      <button class="btn btn-danger btn-sm" id="btn-clear-absences" type="button">Vaciar ausencias del año</button>
+    </div>
+    <p class="absence-count-line" id="absence-count-line"><strong>10</strong> día(s) seleccionados en 2026 &nbsp;·&nbsp; 10 en total (todos los años)</p>
+    <div class="absence-months" id="absence-months"><div class="mini-month"><div class="mini-month-title">Enero 2026</div><div class="mini-dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="mini-days"><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button type="button" class="mini-day">1</button><button type="button" class="mini-day">2</button><button type="button" class="mini-day weekend-day">3</button><button type="button" class="mini-day weekend-day">4</button><button type="button" class="mini-day">5</button><button type="button" class="mini-day">6</button><button type="button" class="mini-day">7</button><button type="button" class="mini-day">8</button><button type="button" class="mini-day">9</button><button type="button" class="mini-day weekend-day">10</button><button type="button" class="mini-day weekend-day">11</button><button type="button" class="mini-day">12</button><button type="button" class="mini-day">13</button><button type="button" class="mini-day">14</button><button type="button" class="mini-day">15</button><button type="button" class="mini-day">16</button><button type="button" class="mini-day weekend-day">17</button><button type="button" class="mini-day weekend-day">18</button><button type="button" class="mini-day">19</button><button type="button" class="mini-day">20</button><button type="button" class="mini-day">21</button><button type="button" class="mini-day">22</button><button type="button" class="mini-day">23</button><button type="button" class="mini-day weekend-day">24</button><button type="button" class="mini-day weekend-day">25</button><button type="button" class="mini-day">26</button><button type="button" class="mini-day">27</button><button type="button" class="mini-day">28</button><button type="button" class="mini-day">29</button><button type="button" class="mini-day">30</button><button type="button" class="mini-day weekend-day">31</button></div></div><div class="mini-month"><div class="mini-month-title">Febrero 2026</div><div class="mini-dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="mini-days"><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button type="button" class="mini-day weekend-day">1</button><button type="button" class="mini-day">2</button><button type="button" class="mini-day">3</button><button type="button" class="mini-day">4</button><button type="button" class="mini-day">5</button><button type="button" class="mini-day">6</button><button type="button" class="mini-day weekend-day">7</button><button type="button" class="mini-day weekend-day">8</button><button type="button" class="mini-day">9</button><button type="button" class="mini-day">10</button><button type="button" class="mini-day">11</button><button type="button" class="mini-day">12</button><button type="button" class="mini-day">13</button><button type="button" class="mini-day weekend-day">14</button><button type="button" class="mini-day weekend-day">15</button><button type="button" class="mini-day">16</button><button type="button" class="mini-day">17</button><button type="button" class="mini-day">18</button><button type="button" class="mini-day">19</button><button type="button" class="mini-day">20</button><button type="button" class="mini-day weekend-day">21</button><button type="button" class="mini-day weekend-day">22</button><button type="button" class="mini-day">23</button><button type="button" class="mini-day">24</button><button type="button" class="mini-day">25</button><button type="button" class="mini-day">26</button><button type="button" class="mini-day">27</button><button type="button" class="mini-day weekend-day">28</button></div></div><div class="mini-month"><div class="mini-month-title">Marzo 2026</div><div class="mini-dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="mini-days"><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button type="button" class="mini-day weekend-day">1</button><button type="button" class="mini-day">2</button><button type="button" class="mini-day">3</button><button type="button" class="mini-day">4</button><button type="button" class="mini-day">5</button><button type="button" class="mini-day">6</button><button type="button" class="mini-day weekend-day">7</button><button type="button" class="mini-day weekend-day">8</button><button type="button" class="mini-day">9</button><button type="button" class="mini-day">10</button><button type="button" class="mini-day">11</button><button type="button" class="mini-day">12</button><button type="button" class="mini-day">13</button><button type="button" class="mini-day weekend-day">14</button><button type="button" class="mini-day weekend-day">15</button><button type="button" class="mini-day">16</button><button type="button" class="mini-day">17</button><button type="button" class="mini-day">18</button><button type="button" class="mini-day">19</button><button type="button" class="mini-day">20</button><button type="button" class="mini-day weekend-day">21</button><button type="button" class="mini-day weekend-day">22</button><button type="button" class="mini-day">23</button><button type="button" class="mini-day">24</button><button type="button" class="mini-day">25</button><button type="button" class="mini-day">26</button><button type="button" class="mini-day">27</button><button type="button" class="mini-day weekend-day">28</button><button type="button" class="mini-day weekend-day">29</button><button type="button" class="mini-day">30</button><button type="button" class="mini-day">31</button></div></div><div class="mini-month"><div class="mini-month-title">Abril 2026</div><div class="mini-dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="mini-days"><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button type="button" class="mini-day">1</button><button type="button" class="mini-day">2</button><button type="button" class="mini-day">3</button><button type="button" class="mini-day weekend-day">4</button><button type="button" class="mini-day weekend-day">5</button><button type="button" class="mini-day">6</button><button type="button" class="mini-day">7</button><button type="button" class="mini-day">8</button><button type="button" class="mini-day">9</button><button type="button" class="mini-day">10</button><button type="button" class="mini-day weekend-day">11</button><button type="button" class="mini-day weekend-day">12</button><button type="button" class="mini-day">13</button><button type="button" class="mini-day">14</button><button type="button" class="mini-day">15</button><button type="button" class="mini-day">16</button><button type="button" class="mini-day">17</button><button type="button" class="mini-day weekend-day">18</button><button type="button" class="mini-day weekend-day">19</button><button type="button" class="mini-day">20</button><button type="button" class="mini-day">21</button><button type="button" class="mini-day">22</button><button type="button" class="mini-day">23</button><button type="button" class="mini-day">24</button><button type="button" class="mini-day weekend-day">25</button><button type="button" class="mini-day weekend-day">26</button><button type="button" class="mini-day">27</button><button type="button" class="mini-day">28</button><button type="button" class="mini-day">29</button><button type="button" class="mini-day">30</button></div></div><div class="mini-month"><div class="mini-month-title">Mayo 2026</div><div class="mini-dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="mini-days"><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button type="button" class="mini-day">1</button><button type="button" class="mini-day weekend-day">2</button><button type="button" class="mini-day weekend-day">3</button><button type="button" class="mini-day">4</button><button type="button" class="mini-day">5</button><button type="button" class="mini-day">6</button><button type="button" class="mini-day">7</button><button type="button" class="mini-day">8</button><button type="button" class="mini-day weekend-day">9</button><button type="button" class="mini-day weekend-day">10</button><button type="button" class="mini-day">11</button><button type="button" class="mini-day">12</button><button type="button" class="mini-day">13</button><button type="button" class="mini-day">14</button><button type="button" class="mini-day">15</button><button type="button" class="mini-day weekend-day">16</button><button type="button" class="mini-day weekend-day">17</button><button type="button" class="mini-day">18</button><button type="button" class="mini-day">19</button><button type="button" class="mini-day">20</button><button type="button" class="mini-day">21</button><button type="button" class="mini-day">22</button><button type="button" class="mini-day weekend-day">23</button><button type="button" class="mini-day weekend-day">24</button><button type="button" class="mini-day">25</button><button type="button" class="mini-day">26</button><button type="button" class="mini-day">27</button><button type="button" class="mini-day">28</button><button type="button" class="mini-day">29</button><button type="button" class="mini-day weekend-day">30</button><button type="button" class="mini-day weekend-day">31</button></div></div><div class="mini-month"><div class="mini-month-title">Junio 2026</div><div class="mini-dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="mini-days"><button type="button" class="mini-day">1</button><button type="button" class="mini-day">2</button><button type="button" class="mini-day">3</button><button type="button" class="mini-day">4</button><button type="button" class="mini-day">5</button><button type="button" class="mini-day weekend-day">6</button><button type="button" class="mini-day weekend-day">7</button><button type="button" class="mini-day">8</button><button type="button" class="mini-day">9</button><button type="button" class="mini-day">10</button><button type="button" class="mini-day">11</button><button type="button" class="mini-day">12</button><button type="button" class="mini-day weekend-day">13</button><button type="button" class="mini-day weekend-day">14</button><button type="button" class="mini-day">15</button><button type="button" class="mini-day">16</button><button type="button" class="mini-day">17</button><button type="button" class="mini-day">18</button><button type="button" class="mini-day">19</button><button type="button" class="mini-day weekend-day">20</button><button type="button" class="mini-day weekend-day">21</button><button type="button" class="mini-day">22</button><button type="button" class="mini-day">23</button><button type="button" class="mini-day">24</button><button type="button" class="mini-day">25</button><button type="button" class="mini-day">26</button><button type="button" class="mini-day weekend-day">27</button><button type="button" class="mini-day weekend-day">28</button><button type="button" class="mini-day">29</button><button type="button" class="mini-day">30</button></div></div><div class="mini-month"><div class="mini-month-title">Julio 2026</div><div class="mini-dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="mini-days"><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button type="button" class="mini-day">1</button><button type="button" class="mini-day">2</button><button type="button" class="mini-day">3</button><button type="button" class="mini-day weekend-day">4</button><button type="button" class="mini-day weekend-day">5</button><button type="button" class="mini-day">6</button><button type="button" class="mini-day">7</button><button type="button" class="mini-day">8</button><button type="button" class="mini-day">9</button><button type="button" class="mini-day">10</button><button type="button" class="mini-day weekend-day">11</button><button type="button" class="mini-day weekend-day">12</button><button type="button" class="mini-day">13</button><button type="button" class="mini-day">14</button><button type="button" class="mini-day">15</button><button type="button" class="mini-day">16</button><button type="button" class="mini-day">17</button><button type="button" class="mini-day weekend-day">18</button><button type="button" class="mini-day weekend-day">19</button><button type="button" class="mini-day">20</button><button type="button" class="mini-day">21</button><button type="button" class="mini-day">22</button><button type="button" class="mini-day">23</button><button type="button" class="mini-day">24</button><button type="button" class="mini-day weekend-day">25</button><button type="button" class="mini-day weekend-day">26</button><button type="button" class="mini-day">27</button><button type="button" class="mini-day">28</button><button type="button" class="mini-day">29</button><button type="button" class="mini-day">30</button><button type="button" class="mini-day">31</button></div></div><div class="mini-month"><div class="mini-month-title">Agosto 2026</div><div class="mini-dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="mini-days"><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button type="button" class="mini-day weekend-day">1</button><button type="button" class="mini-day weekend-day">2</button><button type="button" class="mini-day">3</button><button type="button" class="mini-day">4</button><button type="button" class="mini-day">5</button><button type="button" class="mini-day">6</button><button type="button" class="mini-day">7</button><button type="button" class="mini-day weekend-day">8</button><button type="button" class="mini-day weekend-day">9</button><button type="button" class="mini-day">10</button><button type="button" class="mini-day">11</button><button type="button" class="mini-day">12</button><button type="button" class="mini-day">13</button><button type="button" class="mini-day">14</button><button type="button" class="mini-day weekend-day">15</button><button type="button" class="mini-day weekend-day">16</button><button type="button" class="mini-day">17</button><button type="button" class="mini-day">18</button><button type="button" class="mini-day">19</button><button type="button" class="mini-day">20</button><button type="button" class="mini-day">21</button><button type="button" class="mini-day weekend-day">22</button><button type="button" class="mini-day weekend-day">23</button><button type="button" class="mini-day">24</button><button type="button" class="mini-day">25</button><button type="button" class="mini-day">26</button><button type="button" class="mini-day">27</button><button type="button" class="mini-day">28</button><button type="button" class="mini-day weekend-day">29</button><button type="button" class="mini-day weekend-day">30</button><button type="button" class="mini-day selected">31</button></div></div><div class="mini-month"><div class="mini-month-title">Septiembre 2026</div><div class="mini-dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="mini-days"><button class="mini-day empty" disabled=""></button><button type="button" class="mini-day selected">1</button><button type="button" class="mini-day selected">2</button><button type="button" class="mini-day selected">3</button><button type="button" class="mini-day selected">4</button><button type="button" class="mini-day weekend-day">5</button><button type="button" class="mini-day weekend-day">6</button><button type="button" class="mini-day">7</button><button type="button" class="mini-day">8</button><button type="button" class="mini-day">9</button><button type="button" class="mini-day">10</button><button type="button" class="mini-day">11</button><button type="button" class="mini-day weekend-day">12</button><button type="button" class="mini-day weekend-day">13</button><button type="button" class="mini-day">14</button><button type="button" class="mini-day">15</button><button type="button" class="mini-day">16</button><button type="button" class="mini-day">17</button><button type="button" class="mini-day">18</button><button type="button" class="mini-day weekend-day">19</button><button type="button" class="mini-day weekend-day">20</button><button type="button" class="mini-day">21</button><button type="button" class="mini-day">22</button><button type="button" class="mini-day">23</button><button type="button" class="mini-day">24</button><button type="button" class="mini-day">25</button><button type="button" class="mini-day weekend-day">26</button><button type="button" class="mini-day weekend-day">27</button><button type="button" class="mini-day">28</button><button type="button" class="mini-day">29</button><button type="button" class="mini-day">30</button></div></div><div class="mini-month"><div class="mini-month-title">Octubre 2026</div><div class="mini-dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="mini-days"><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button type="button" class="mini-day">1</button><button type="button" class="mini-day">2</button><button type="button" class="mini-day weekend-day">3</button><button type="button" class="mini-day weekend-day">4</button><button type="button" class="mini-day selected">5</button><button type="button" class="mini-day selected">6</button><button type="button" class="mini-day selected">7</button><button type="button" class="mini-day selected">8</button><button type="button" class="mini-day selected">9</button><button type="button" class="mini-day weekend-day">10</button><button type="button" class="mini-day weekend-day">11</button><button type="button" class="mini-day">12</button><button type="button" class="mini-day">13</button><button type="button" class="mini-day">14</button><button type="button" class="mini-day">15</button><button type="button" class="mini-day">16</button><button type="button" class="mini-day weekend-day">17</button><button type="button" class="mini-day weekend-day">18</button><button type="button" class="mini-day">19</button><button type="button" class="mini-day">20</button><button type="button" class="mini-day">21</button><button type="button" class="mini-day">22</button><button type="button" class="mini-day">23</button><button type="button" class="mini-day weekend-day">24</button><button type="button" class="mini-day weekend-day">25</button><button type="button" class="mini-day">26</button><button type="button" class="mini-day">27</button><button type="button" class="mini-day">28</button><button type="button" class="mini-day">29</button><button type="button" class="mini-day">30</button><button type="button" class="mini-day weekend-day">31</button></div></div><div class="mini-month"><div class="mini-month-title">Noviembre 2026</div><div class="mini-dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="mini-days"><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button class="mini-day empty" disabled=""></button><button type="button" class="mini-day weekend-day">1</button><button type="button" class="mini-day">2</button><button type="button" class="mini-day">3</button><button type="button" class="mini-day">4</button><button type="button" class="mini-day">5</button><button type="button" class="mini-day">6</button><button type="button" class="mini-day weekend-day">7</button><button type="button" class="mini-day weekend-day">8</button><button type="button" class="mini-day">9</button><button type="button" class="mini-day">10</button><button type="button" class="mini-day">11</button><button type="button" class="mini-day">12</button><button type="button" class="mini-day">13</button><button type="button" class="mini-day weekend-day">14</button><button type="button" class="mini-day weekend-day">15</button><button type="button" class="mini-day">16</button><button type="button" class="mini-day">17</button><button type="button" class="mini-day">18</button><button type="button" class="mini-day">19</button><button type="button" class="mini-day">20</button><button type="button" class="mini-day weekend-day">21</button><button type="button" class="mini-day weekend-day">22</button><button type="button" class="mini-day">23</button><button type="button" class="mini-day">24</button><button type="button" class="mini-day">25</button><button type="button" class="mini-day">26</button><button type="button" class="mini-day">27</button><button type="button" class="mini-day weekend-day">28</button><button type="button" class="mini-day weekend-day">29</button><button type="button" class="mini-day">30</button></div></div><div class="mini-month"><div class="mini-month-title">Diciembre 2026</div><div class="mini-dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div><div class="mini-days"><button class="mini-day empty" disabled=""></button><button type="button" class="mini-day">1</button><button type="button" class="mini-day">2</button><button type="button" class="mini-day">3</button><button type="button" class="mini-day">4</button><button type="button" class="mini-day weekend-day">5</button><button type="button" class="mini-day weekend-day">6</button><button type="button" class="mini-day">7</button><button type="button" class="mini-day">8</button><button type="button" class="mini-day">9</button><button type="button" class="mini-day">10</button><button type="button" class="mini-day">11</button><button type="button" class="mini-day weekend-day">12</button><button type="button" class="mini-day weekend-day">13</button><button type="button" class="mini-day">14</button><button type="button" class="mini-day">15</button><button type="button" class="mini-day">16</button><button type="button" class="mini-day">17</button><button type="button" class="mini-day">18</button><button type="button" class="mini-day weekend-day">19</button><button type="button" class="mini-day weekend-day">20</button><button type="button" class="mini-day">21</button><button type="button" class="mini-day">22</button><button type="button" class="mini-day">23</button><button type="button" class="mini-day">24</button><button type="button" class="mini-day">25</button><button type="button" class="mini-day weekend-day">26</button><button type="button" class="mini-day weekend-day">27</button><button type="button" class="mini-day">28</button><button type="button" class="mini-day">29</button><button type="button" class="mini-day">30</button><button type="button" class="mini-day">31</button></div></div></div>
+    <div class="modal-close-row">
+      <button class="btn btn-solid" id="btn-save-absences" type="button">Guardar y cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="overlay" id="confirm-overlay" hidden="">
+  <div class="modal confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title">
+    <h3 id="confirm-title">—</h3>
+    <p id="confirm-message">—</p>
+    <div class="modal-actions" style="flex-direction:row;justify-content:flex-end;margin-top:16px;">
+      <button class="btn btn-outline" id="btn-confirm-cancel" type="button">Cancelar</button>
+      <button class="btn btn-danger-solid" id="btn-confirm-ok" type="button">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* =========================================================================
+   CALENDARIO DE LAVADO DE TAZAS — Oficina de Ourense
+   Aplicación autocontenida en un único archivo HTML.
+   Secciones del código:
+     1. CONFIGURACIÓN Y UTILIDADES DE FECHAS
+     2. DATOS DE FESTIVOS (Ourense, Galicia, España)
+     3. ESTADO DE LA APLICACIÓN
+     4. LOCALSTORAGE
+     5. ALGORITMO DE ASIGNACIÓN (rotación, ausencias, no-ha-lavado, intercambios)
+     6. GENERACIÓN Y RENDERIZADO DEL CALENDARIO
+     7. PANEL DE PERSONAS
+     8. MODAL DE ACCIONES DE DÍA / INFO FESTIVO
+     9. PANEL DE AUSENCIAS
+    10. INTERCAMBIOS ("CAMBIAR CON")
+    11. RESTABLECER DATOS
+    12. EXPORTACIÓN A PDF
+    13. TOASTS Y CONFIRMACIONES
+    14. INICIALIZACIÓN
+   ========================================================================= */
+
+/* ============================ 1. CONFIGURACIÓN Y FECHAS ============================ */
+
+const DOW_LABELS = ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'];
+const MONTH_LABELS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MONTH_LABELS_SHORT = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const CURRENT_REAL_YEAR = new Date().getFullYear();
+const YEAR_RANGE = { min: CURRENT_REAL_YEAR - 2, max: CURRENT_REAL_YEAR + 6 };
+
+const DEFAULT_PALETTE = [
+  '#3E6259', '#8E6C88', '#A97C50', '#5C7A99', '#7A8C5B',
+  '#9B6B6B', '#6B7B9B', '#8C7A5B', '#5B8C7A', '#9B8C5B',
+  '#7C6B9B', '#6B9B8C'
+];
+
+function computeEasterSunday(year) {
+  // Algoritmo de Meeus/Jones/Butcher (calendario gregoriano)
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(Date.UTC(year, month - 1, day));
+}
+function addDaysUTC(date, days) {
+  const d = new Date(date.getTime());
+  d.setUTCDate(d.getUTCDate() + days);
+  return d;
+}
+function toISO(date) {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(date.getUTCDate()).padStart(2, '0');
+  return y + '-' + m + '-' + d;
+}
+function isoFromParts(y, m, d) {
+  return y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+}
+function parseISOToUTCDate(iso) {
+  const [y,m,d] = iso.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
+}
+function formatDayMonth(iso) {
+  const d = parseISOToUTCDate(iso);
+  return String(d.getUTCDate()).padStart(2,'0') + '/' + String(d.getUTCMonth()+1).padStart(2,'0');
+}
+function formatLongDate(iso) {
+  const d = parseISOToUTCDate(iso);
+  return d.getUTCDate() + ' de ' + MONTH_LABELS[d.getUTCMonth()].toLowerCase() + ' de ' + d.getUTCFullYear();
+}
+function todayISO() {
+  const n = new Date();
+  return isoFromParts(n.getFullYear(), n.getMonth()+1, n.getDate());
+}
+
+/* ============================ 2. DATOS DE FESTIVOS ============================ */
+/*
+  Fuentes verificadas (nacional/autonómico y locales de Ourense capital):
+   - 2026: Diario Oficial de Galicia (DOG) + Ayuntamiento de Ourense.
+   - 2027: Decreto de la Xunta de Galicia (calendario laboral 2027) +
+           continuidad de las fiestas locales fijadas por el Ayuntamiento
+           de Ourense (Martes de Carnaval y San Martiño).
+
+  PARA AÑADIR UN NUEVO AÑO: cuando el Ayuntamiento de Ourense publique en el
+  Boletín Oficial de la Provincia (BOP) los dos festivos locales del año
+  siguiente, añade un bloque nuevo aquí con la misma estructura. Si no lo
+  añades, la aplicación calculará una estimación automática (ver la función
+  estimateHolidaysForYear) y lo indicará con un aviso en pantalla.
+*/
+const OFFICIAL_HOLIDAYS = {
+  2026: [
+    { date: '2026-01-01', name: 'Año Nuevo', level: 'nacional' },
+    { date: '2026-01-06', name: 'Epifanía del Señor (Reyes)', level: 'nacional' },
+    { date: '2026-02-17', name: 'Martes de Carnaval', level: 'local' },
+    { date: '2026-03-19', name: 'San José', level: 'autonomico' },
+    { date: '2026-04-02', name: 'Jueves Santo', level: 'autonomico' },
+    { date: '2026-04-03', name: 'Viernes Santo', level: 'nacional' },
+    { date: '2026-05-01', name: 'Fiesta del Trabajo', level: 'nacional' },
+    { date: '2026-06-24', name: 'San Xoán', level: 'autonomico' },
+    { date: '2026-07-25', name: 'Día Nacional de Galicia', level: 'autonomico' },
+    { date: '2026-08-15', name: 'Asunción de la Virgen', level: 'nacional' },
+    { date: '2026-10-12', name: 'Fiesta Nacional de España', level: 'nacional' },
+    { date: '2026-11-01', name: 'Todos los Santos', level: 'nacional' },
+    { date: '2026-11-11', name: 'San Martiño', level: 'local' },
+    { date: '2026-12-06', name: 'Día de la Constitución', level: 'nacional' },
+    { date: '2026-12-08', name: 'Inmaculada Concepción', level: 'nacional' },
+    { date: '2026-12-25', name: 'Navidad', level: 'nacional' }
+  ],
+  2027: [
+    { date: '2027-01-01', name: 'Año Nuevo', level: 'nacional' },
+    { date: '2027-01-06', name: 'Epifanía del Señor (Reyes)', level: 'nacional' },
+    { date: '2027-02-09', name: 'Martes de Carnaval', level: 'local' },
+    { date: '2027-03-19', name: 'San José', level: 'autonomico' },
+    { date: '2027-03-25', name: 'Jueves Santo', level: 'autonomico' },
+    { date: '2027-03-26', name: 'Viernes Santo', level: 'nacional' },
+    { date: '2027-05-01', name: 'Fiesta del Trabajo', level: 'nacional' },
+    { date: '2027-05-17', name: 'Día das Letras Galegas', level: 'autonomico' },
+    { date: '2027-10-12', name: 'Fiesta Nacional de España', level: 'nacional' },
+    { date: '2027-11-01', name: 'Todos los Santos', level: 'nacional' },
+    { date: '2027-11-11', name: 'San Martiño', level: 'local' },
+    { date: '2027-12-06', name: 'Día de la Constitución', level: 'nacional' },
+    { date: '2027-12-08', name: 'Inmaculada Concepción', level: 'nacional' },
+    { date: '2027-12-25', name: 'Navidad', level: 'nacional' }
+  ]
+  // AÑADIR AQUÍ NUEVOS AÑOS (ver comentario arriba).
+};
+
+function estimateHolidaysForYear(year) {
+  // Estimación automática para años sin datos oficiales confirmados.
+  // Festivos nacionales fijos + Semana Santa calculada + una estimación
+  // razonable de los festivos autonómico y locales de Ourense, basada en
+  // el patrón observado en 2026-2027. Debe verificarse antes de imprimir.
+  const easter = computeEasterSunday(year);
+  const juevesSanto = toISO(addDaysUTC(easter, -3));
+  const viernesSanto = toISO(addDaysUTC(easter, -2));
+  const carnaval = toISO(addDaysUTC(easter, -47));
+  const list = [
+    { date: isoFromParts(year,1,1), name: 'Año Nuevo', level: 'nacional' },
+    { date: isoFromParts(year,1,6), name: 'Epifanía del Señor (Reyes)', level: 'nacional' },
+    { date: carnaval, name: 'Martes de Carnaval (estimado)', level: 'local' },
+    { date: isoFromParts(year,3,19), name: 'San José (estimado)', level: 'autonomico' },
+    { date: juevesSanto, name: 'Jueves Santo (estimado)', level: 'autonomico' },
+    { date: viernesSanto, name: 'Viernes Santo', level: 'nacional' },
+    { date: isoFromParts(year,5,1), name: 'Fiesta del Trabajo', level: 'nacional' },
+    { date: isoFromParts(year,8,15), name: 'Asunción de la Virgen', level: 'nacional' },
+    { date: isoFromParts(year,10,12), name: 'Fiesta Nacional de España', level: 'nacional' },
+    { date: isoFromParts(year,11,1), name: 'Todos los Santos', level: 'nacional' },
+    { date: isoFromParts(year,11,11), name: 'San Martiño (estimado)', level: 'local' },
+    { date: isoFromParts(year,12,6), name: 'Día de la Constitución', level: 'nacional' },
+    { date: isoFromParts(year,12,8), name: 'Inmaculada Concepción', level: 'nacional' },
+    { date: isoFromParts(year,12,25), name: 'Navidad', level: 'nacional' }
+  ];
+  // eliminar posibles fechas duplicadas (misma fecha, se conserva la primera)
+  const seen = new Set();
+  return list.filter(h => { if (seen.has(h.date)) return false; seen.add(h.date); return true; });
+}
+
+function getHolidaysForYear(year) {
+  const raw = OFFICIAL_HOLIDAYS[year] || estimateHolidaysForYear(year);
+  const map = {};
+  raw.forEach(h => { map[h.date] = h; });
+  return { list: raw, map: map, isOfficial: !!OFFICIAL_HOLIDAYS[year] };
+}
+
+/* ============================ 3. ESTADO DE LA APLICACIÓN ============================ */
+
+const state = {
+  people: [],                 // [{id, name, color}]
+  absences: {},                // { personId: Set<'YYYY-MM-DD'> }
+  missed: {},                  // { 'YYYY-MM-DD': {person: personId, substitute: personId|null} }
+  swaps: [],                   // [{a:'YYYY-MM-DD', b:'YYYY-MM-DD'}]
+  dayOverrides: {},            // { 'YYYY-MM-DD': personId }  asignación manual puntual de un día
+  sequenceAnchors: [],         // [{date:'YYYY-MM-DD', personId}]  reinicia el orden de rotación desde ese día
+  year: CURRENT_REAL_YEAR,
+  swapMode: null,              // { sourceDate } mientras se elige el día de intercambio
+  activeAbsencePersonId: null,
+  activeAbsenceSelection: null // Set de fechas en edición dentro del modal
+};
+
+/* ============================ 4. ESTADO: HTML INCRUSTADO + LOCALSTORAGE ============================
+   Fuente de datos para COMPARTIR el calendario entre ordenadores: el bloque
+   <script id="embedded-state"> incrustado en este mismo archivo HTML. Al
+   pulsar "GUARDAR CAMBIOS" se descarga una copia de este HTML con ese bloque
+   actualizado con el estado actual, así que abrir ese archivo en cualquier
+   otro ordenador reproduce exactamente el mismo estado.
+   localStorage se mantiene solo como comodidad local (autoguardado mientras
+   se trabaja en este mismo navegador, por si se recarga la página sin haber
+   pulsado "GUARDAR CAMBIOS").
+   ========================================================================= */
+
+const LS_KEYS = {
+  people: 'tazas_people_v1',
+  absences: 'tazas_absences_v1',
+  missed: 'tazas_missed_v1',
+  swaps: 'tazas_swaps_v1',
+  year: 'tazas_year_v1'
+};
+
+const LS_KEYS_EXTRA = {
+  dayOverrides: 'tazas_overrides_v1',
+  sequenceAnchors: 'tazas_anchors_v1'
+};
+
+/* Normaliza el formato de "missed": versiones anteriores guardaban solo el id
+   de la persona; ahora se guarda {person, substitute} para poder reflejar
+   quién sustituyó a quién. */
+function normalizeMissed(raw) {
+  const out = {};
+  Object.keys(raw || {}).forEach(date => {
+    const v = raw[date];
+    if (v && typeof v === 'object') {
+      out[date] = { person: v.person || null, substitute: v.substitute || null };
+    } else if (typeof v === 'string') {
+      out[date] = { person: v, substitute: null };
+    }
+  });
+  return out;
+}
+
+function buildStateSnapshot() {
+  const absPlain = {};
+  Object.keys(state.absences).forEach(pid => { absPlain[pid] = Array.from(state.absences[pid]); });
+  return {
+    __hasData: true,
+    people: state.people,
+    absences: absPlain,
+    missed: state.missed,
+    swaps: state.swaps,
+    dayOverrides: state.dayOverrides,
+    sequenceAnchors: state.sequenceAnchors,
+    year: state.year
+  };
+}
+
+function applyStateSnapshot(obj) {
+  state.people = Array.isArray(obj.people) ? obj.people : [];
+  const abs = {};
+  Object.keys(obj.absences || {}).forEach(pid => { abs[pid] = new Set(obj.absences[pid]); });
+  state.absences = abs;
+  state.missed = normalizeMissed(obj.missed);
+  state.swaps = Array.isArray(obj.swaps) ? obj.swaps : [];
+  state.dayOverrides = obj.dayOverrides && typeof obj.dayOverrides === 'object' ? obj.dayOverrides : {};
+  state.sequenceAnchors = Array.isArray(obj.sequenceAnchors) ? obj.sequenceAnchors : [];
+  const y = Number(obj.year);
+  state.year = (y && y >= YEAR_RANGE.min && y <= YEAR_RANGE.max) ? y : CURRENT_REAL_YEAR;
+}
+
+function readEmbeddedState() {
+  try {
+    const el = document.getElementById('embedded-state');
+    if (!el) return null;
+    const raw = (el.textContent || '').trim();
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    return (obj && obj.__hasData) ? obj : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(LS_KEYS.people, JSON.stringify(state.people));
+    const absPlain = {};
+    Object.keys(state.absences).forEach(pid => { absPlain[pid] = Array.from(state.absences[pid]); });
+    localStorage.setItem(LS_KEYS.absences, JSON.stringify(absPlain));
+    localStorage.setItem(LS_KEYS.missed, JSON.stringify(state.missed));
+    localStorage.setItem(LS_KEYS.swaps, JSON.stringify(state.swaps));
+    localStorage.setItem(LS_KEYS.year, JSON.stringify(state.year));
+    localStorage.setItem(LS_KEYS_EXTRA.dayOverrides, JSON.stringify(state.dayOverrides));
+    localStorage.setItem(LS_KEYS_EXTRA.sequenceAnchors, JSON.stringify(state.sequenceAnchors));
+  } catch (err) {
+    // El almacenamiento local es solo una comodidad; si falla, no pasa nada:
+    // el estado sigue disponible en memoria y se puede guardar como HTML.
+  }
+}
+
+function loadState() {
+  // 1) Preferimos el estado incrustado en el propio HTML: es la fuente de
+  //    datos que permite compartir el calendario entre ordenadores.
+  const embedded = readEmbeddedState();
+  if (embedded) {
+    applyStateSnapshot(embedded);
+    return;
+  }
+  // 2) Si no hay estado incrustado (plantilla en blanco), usamos localStorage
+  //    como respaldo local de este mismo navegador.
+  try {
+    const people = JSON.parse(localStorage.getItem(LS_KEYS.people) || '[]');
+    state.people = Array.isArray(people) ? people : [];
+    const absRaw = JSON.parse(localStorage.getItem(LS_KEYS.absences) || '{}');
+    const abs = {};
+    Object.keys(absRaw).forEach(pid => { abs[pid] = new Set(absRaw[pid]); });
+    state.absences = abs;
+    state.missed = normalizeMissed(JSON.parse(localStorage.getItem(LS_KEYS.missed) || '{}'));
+    state.swaps = JSON.parse(localStorage.getItem(LS_KEYS.swaps) || '[]');
+    state.dayOverrides = JSON.parse(localStorage.getItem(LS_KEYS_EXTRA.dayOverrides) || '{}');
+    state.sequenceAnchors = JSON.parse(localStorage.getItem(LS_KEYS_EXTRA.sequenceAnchors) || '[]');
+    const storedYear = JSON.parse(localStorage.getItem(LS_KEYS.year) || 'null');
+    state.year = storedYear && storedYear >= YEAR_RANGE.min && storedYear <= YEAR_RANGE.max ? storedYear : CURRENT_REAL_YEAR;
+  } catch (err) {
+    state.people = []; state.absences = {}; state.missed = {}; state.swaps = [];
+    state.dayOverrides = {}; state.sequenceAnchors = []; state.year = CURRENT_REAL_YEAR;
+  }
+}
+
+function resetAllData() {
+  localStorage.removeItem(LS_KEYS.people);
+  localStorage.removeItem(LS_KEYS.absences);
+  localStorage.removeItem(LS_KEYS.missed);
+  localStorage.removeItem(LS_KEYS.swaps);
+  localStorage.removeItem(LS_KEYS.year);
+  localStorage.removeItem(LS_KEYS_EXTRA.dayOverrides);
+  localStorage.removeItem(LS_KEYS_EXTRA.sequenceAnchors);
+  state.people = [];
+  state.absences = {};
+  state.missed = {};
+  state.swaps = [];
+  state.dayOverrides = {};
+  state.sequenceAnchors = [];
+  state.year = CURRENT_REAL_YEAR;
+  renderAll();
+  showToast('Datos borrados. La aplicación ha vuelto al estado inicial.');
+}
+
+/* ---- Generar y descargar un HTML con el estado actual incrustado ---- */
+function saveHtmlFile() {
+  try {
+    const snapshot = buildStateSnapshot();
+    const json = JSON.stringify(snapshot);
+    const docClone = document.documentElement.cloneNode(true);
+    const stateScript = docClone.querySelector('#embedded-state');
+    if (stateScript) stateScript.textContent = json;
+    const htmlStr = '<!DOCTYPE html>\n' + docClone.outerHTML + '\n';
+    const blob = new Blob([htmlStr], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'calendario_tazas_' + state.year + '.html';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    showToast('Archivo HTML guardado con todos los datos incrustados.');
+  } catch (err) {
+    showToast('No se pudo generar el archivo HTML para guardar.', true);
+  }
+}
+
+/* ============================ 5. ALGORITMO DE ASIGNACIÓN ============================ */
+
+function generateWorkdays(year, holidayMap) {
+  const days = [];
+  const d = new Date(Date.UTC(year, 0, 1));
+  while (d.getUTCFullYear() === year) {
+    const dow = d.getUTCDay();
+    const iso = toISO(d);
+    if (dow >= 1 && dow <= 5 && !holidayMap[iso]) days.push(iso);
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  return days;
+}
+
+function computeBaseAssignments(workdays, people, absences, sequenceAnchors) {
+  const result = {};
+  const n = people.length;
+  if (n === 0) return result;
+  // Los "anclajes de secuencia" reinician el orden de la rotación a partir
+  // de una fecha concreta, empezando por la persona indicada.
+  const anchors = (sequenceAnchors || [])
+    .filter(a => a && a.date && people.some(p => p.id === a.personId))
+    .slice()
+    .sort((a, b) => (a.date < b.date ? -1 : (a.date > b.date ? 1 : 0)));
+  let anchorIdx = 0;
+  let pointer = 0;
+  for (const date of workdays) {
+    while (anchorIdx < anchors.length && anchors[anchorIdx].date <= date) {
+      const pIdx = people.findIndex(p => p.id === anchors[anchorIdx].personId);
+      if (pIdx !== -1) pointer = pIdx;
+      anchorIdx++;
+    }
+    let tries = 0, idx = pointer, assigned = null;
+    while (tries < n) {
+      const person = people[idx % n];
+      const absSet = absences[person.id];
+      const isAbsent = absSet && absSet.has(date);
+      if (!isAbsent) { assigned = person.id; pointer = (idx + 1) % n; break; }
+      idx++; tries++;
+    }
+    result[date] = assigned;
+  }
+  return result;
+}
+
+function findRecoveryDate(missedDate, personId, workdaySet, absences, usedDates) {
+  let d = addDaysUTC(parseISOToUTCDate(missedDate), 1);
+  let guard = 0;
+  while (guard < 730) {
+    const iso = toISO(d);
+    if (workdaySet.has(iso)) {
+      const absSet = absences[personId];
+      const isAbsent = absSet && absSet.has(iso);
+      if (!isAbsent && !usedDates.has(iso)) return iso;
+    }
+    d = addDaysUTC(d, 1);
+    guard++;
+  }
+  return null;
+}
+
+function computeYearView(year) {
+  const { map: holidayMap } = getHolidaysForYear(year);
+  const workdays = generateWorkdays(year, holidayMap);
+  const workdaySet = new Set(workdays);
+  const base = computeBaseAssignments(workdays, state.people, state.absences, state.sequenceAnchors);
+
+  // Aplicar incidencias "NO HA LAVADO" (+ sustituto que lavó ese día en su lugar)
+  const final = Object.assign({}, base);
+  const flags = {}; // date -> {missed,missedPerson,substitute,recovery,recoveryOf,recoveryDate,swapWith,manualOverride}
+  const relevantMissed = {};
+  Object.keys(state.missed).forEach(date => {
+    if (date.slice(0,4) === String(year)) relevantMissed[date] = state.missed[date];
+  });
+  const usedRecoveryDates = new Set();
+  Object.keys(relevantMissed).sort().forEach(date => {
+    const entry = relevantMissed[date] || {};
+    const personId = entry.person;
+    const substituteId = entry.substitute || null;
+    if (!personId) return;
+    flags[date] = flags[date] || {};
+    flags[date].missed = true;
+    flags[date].missedPerson = personId;
+    flags[date].substitute = substituteId;
+    final[date] = substituteId || personId; // quien lavó realmente ese día
+    const recDate = findRecoveryDate(date, personId, workdaySet, state.absences, usedRecoveryDates);
+    if (recDate) {
+      usedRecoveryDates.add(recDate);
+      final[recDate] = personId;
+      flags[recDate] = flags[recDate] || {};
+      flags[recDate].recovery = true;
+      flags[recDate].recoveryOf = date;
+      flags[date].recoveryDate = recDate;
+    }
+  });
+
+  // Aplicar intercambios ("CAMBIAR CON")
+  state.swaps.forEach(sw => {
+    if (sw.a.slice(0,4) !== String(year) && sw.b.slice(0,4) !== String(year)) return;
+    const tmp = final[sw.a];
+    final[sw.a] = final[sw.b];
+    final[sw.b] = tmp;
+    flags[sw.a] = flags[sw.a] || {};
+    flags[sw.b] = flags[sw.b] || {};
+    flags[sw.a].swapWith = sw.b;
+    flags[sw.b].swapWith = sw.a;
+  });
+
+  // Aplicar asignaciones manuales puntuales: tienen siempre la última palabra
+  Object.keys(state.dayOverrides).forEach(date => {
+    if (date.slice(0,4) !== String(year)) return;
+    const personId = state.dayOverrides[date];
+    if (!personId || !state.people.some(p => p.id === personId)) return;
+    final[date] = personId;
+    flags[date] = flags[date] || {};
+    flags[date].manualOverride = true;
+  });
+
+  return { holidayMap, workdays, workdaySet, base, final, flags };
+}
+
+/* ============================ 6. GENERACIÓN Y RENDERIZADO DEL CALENDARIO ============================ */
+
+function personById(id) { return state.people.find(p => p.id === id); }
+
+function daysInMonth(year, monthIndex) { return new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate(); }
+function mondayIndexOfWeekday(jsDay) { return jsDay === 0 ? 6 : jsDay - 1; } // Lun=0..Dom=6
+
+function renderAll() {
+  populateYearSelect();
+  renderNoticeBanner();
+  renderSidebarPeople();
+  renderEmptyState();
+  renderCalendarTitle();
+  if (state.people.length > 0) renderMonthsGrid();
+  else document.getElementById('months-grid').innerHTML = '';
+  renderLegend();
+  saveState();
+}
+
+function populateYearSelect() {
+  const sel = document.getElementById('year-select');
+  sel.innerHTML = '';
+  for (let y = YEAR_RANGE.min; y <= YEAR_RANGE.max; y++) {
+    const opt = document.createElement('option');
+    opt.value = String(y);
+    opt.textContent = String(y);
+    if (y === state.year) opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
+function renderNoticeBanner() {
+  const el = document.getElementById('notice-banner');
+  const { isOfficial } = getHolidaysForYear(state.year);
+  if (!isOfficial) {
+    el.hidden = false;
+    el.innerHTML = '<strong>⚠ Festivos estimados para ' + state.year + '.</strong>&nbsp;Los festivos nacionales y de Semana Santa se han calculado automáticamente; el festivo autonómico y los locales de Ourense son una estimación. Verifícalos con el Concello de Ourense antes de imprimir.';
+  } else {
+    el.hidden = true;
+  }
+}
+
+function renderEmptyState() {
+  document.getElementById('empty-state').hidden = state.people.length > 0;
+  document.getElementById('print-root').style.display = state.people.length > 0 ? '' : 'none';
+}
+
+function renderCalendarTitle() {
+  document.getElementById('cal-title').textContent = 'Calendario de lavado — ' + state.year;
+}
+
+function renderMonthsGrid() {
+  const grid = document.getElementById('months-grid');
+  grid.innerHTML = '';
+  const view = computeYearView(state.year);
+  for (let m = 0; m < 12; m++) {
+    grid.appendChild(renderMonthCard(state.year, m, view));
+  }
+}
+
+function renderMonthCard(year, monthIndex, view) {
+  const card = document.createElement('div');
+  card.className = 'month-card';
+
+  const title = document.createElement('div');
+  title.className = 'month-title';
+  title.textContent = MONTH_LABELS[monthIndex];
+  card.appendChild(title);
+
+  const dowRow = document.createElement('div');
+  dowRow.className = 'dow-row';
+  DOW_LABELS.forEach(l => {
+    const c = document.createElement('div');
+    c.className = 'dow-cell';
+    c.textContent = l;
+    dowRow.appendChild(c);
+  });
+  card.appendChild(dowRow);
+
+  const daysGrid = document.createElement('div');
+  daysGrid.className = 'days-grid';
+
+  const totalDays = daysInMonth(year, monthIndex);
+  const firstDow = mondayIndexOfWeekday(new Date(Date.UTC(year, monthIndex, 1)).getUTCDay());
+  for (let i = 0; i < firstDow; i++) {
+    const e = document.createElement('div');
+    e.className = 'day-cell empty';
+    daysGrid.appendChild(e);
+  }
+  const today = todayISO();
+  for (let day = 1; day <= totalDays; day++) {
+    const iso = isoFromParts(year, monthIndex + 1, day);
+    daysGrid.appendChild(renderDayCell(iso, day, view, iso === today));
+  }
+  card.appendChild(daysGrid);
+  return card;
+}
+
+function renderDayCell(iso, dayNum, view, isToday) {
+  const holiday = view.holidayMap[iso];
+  const dow = parseISOToUTCDate(iso).getUTCDay();
+  const isWeekend = dow === 0 || dow === 6;
+  const flag = view.flags[iso] || {};
+  const isWorkday = !holiday && !isWeekend;
+
+  const cell = document.createElement(isWorkday || holiday ? 'button' : 'div');
+  cell.className = 'day-cell';
+  cell.dataset.date = iso;
+  if (isToday) cell.classList.add('today-marker');
+
+  if (holiday) {
+    cell.classList.add('holiday', 'level-' + holiday.level);
+    cell.type = 'button';
+    cell.addEventListener('click', () => openInfoModal(holiday.name, formatLongDate(iso) + ' · Festivo ' + levelLabel(holiday.level) + (holiday.name.includes('estimado') ? ' (fecha estimada, verificar)' : '.')));
+    const num = document.createElement('div'); num.className = 'day-num'; num.textContent = dayNum;
+    cell.appendChild(num);
+    const tag = document.createElement('div');
+    tag.className = 'holiday-tag level-' + holiday.level;
+    tag.textContent = holiday.level[0].toUpperCase();
+    cell.appendChild(tag);
+    const label = document.createElement('div');
+    label.className = 'holiday-label';
+    label.textContent = holiday.name.replace(' (estimado)', '').replace(' (estimado, festivo autonómico de Galicia)', '');
+    cell.title = holiday.name;
+    cell.appendChild(label);
+  } else if (isWeekend) {
+    cell.classList.add('weekend');
+    cell.title = 'Fin de semana';
+    const num = document.createElement('div'); num.className = 'day-num'; num.textContent = dayNum;
+    cell.appendChild(num);
+  } else {
+    cell.classList.add('workday');
+    cell.type = 'button';
+    const personId = view.final[iso];
+    const person = personId ? personById(personId) : null;
+    cell.addEventListener('click', () => openDayModal(iso, view));
+
+    const num = document.createElement('div'); num.className = 'day-num'; num.textContent = dayNum;
+    cell.appendChild(num);
+
+    if (person) {
+      const nameEl = document.createElement('div');
+      nameEl.className = 'day-person';
+      nameEl.style.color = person.color;
+      nameEl.textContent = person.name;
+      cell.appendChild(nameEl);
+    } else if (state.people.length > 0) {
+      const nameEl = document.createElement('div');
+      nameEl.className = 'day-person';
+      nameEl.style.color = 'var(--ink-faint)';
+      nameEl.textContent = '— sin asignar —';
+      cell.appendChild(nameEl);
+    }
+
+    const addDayNote = (text, extraClass) => {
+      const note = document.createElement('div');
+      note.className = 'day-note' + (extraClass ? ' ' + extraClass : '');
+      note.textContent = text;
+      cell.appendChild(note);
+    };
+
+    if (flag.missed) {
+      cell.classList.add('missed-x');
+      const missedPerson = personById(flag.missedPerson);
+      addDayNote('No lavó: ' + (missedPerson ? missedPerson.name : '—'), 'note-missed');
+      if (flag.substitute) {
+        const subPerson = personById(flag.substitute);
+        addDayNote('Sustituye: ' + (subPerson ? subPerson.name : '—'), 'note-substitute');
+      }
+    }
+    if (flag.swapWith) {
+      const thisOriginal = personById(view.base[iso]);
+      const otherOriginal = personById(view.base[flag.swapWith]);
+      if (thisOriginal && otherOriginal) {
+        addDayNote('Cambio: ' + thisOriginal.name + ' ↔ ' + otherOriginal.name + ' (' + formatDayMonth(flag.swapWith) + ')', 'note-swap');
+      } else {
+        addDayNote('CAMBIO CON ' + formatDayMonth(flag.swapWith), 'note-swap');
+      }
+    } else if (flag.recovery) {
+      addDayNote('RECUPERA ' + formatDayMonth(flag.recoveryOf));
+    }
+    if (flag.manualOverride) {
+      addDayNote('Asignación manual', 'note-manual');
+    }
+  }
+  return cell;
+}
+
+function levelLabel(level) {
+  if (level === 'nacional') return 'nacional';
+  if (level === 'autonomico') return 'autonómico (Galicia)';
+  return 'local (Ourense)';
+}
+
+function renderLegend() {
+  const box = document.getElementById('legend-people');
+  box.innerHTML = '';
+  state.people.forEach(p => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    const dot = document.createElement('span');
+    dot.className = 'legend-dot';
+    dot.style.background = p.color;
+    item.appendChild(dot);
+    item.appendChild(document.createTextNode(p.name));
+    box.appendChild(item);
+  });
+}
+
+/* ============================ 7. PANEL DE PERSONAS ============================ */
+
+function uid() { return 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function nextPaletteColor() {
+  return DEFAULT_PALETTE[state.people.length % DEFAULT_PALETTE.length];
+}
+
+function nameExists(name, excludeId) {
+  const norm = name.trim().toLowerCase();
+  return state.people.some(p => p.id !== excludeId && p.name.trim().toLowerCase() === norm);
+}
+
+function addPerson(name) {
+  const trimmed = (name || '').trim();
+  if (!trimmed) { showToast('Escribe un nombre antes de añadir.', true); return; }
+  if (nameExists(trimmed, null)) { showToast('Ya existe una persona con ese nombre.', true); return; }
+  state.people.push({ id: uid(), name: trimmed, color: nextPaletteColor() });
+  renderAll();
+  showToast('Persona añadida.');
+}
+
+function removePerson(id) {
+  const person = personById(id);
+  if (!person) return;
+  openConfirm(
+    'Eliminar persona',
+    '¿Seguro que quieres eliminar a «' + person.name + '»? La rotación se recalculará con el resto de personas.',
+    () => {
+      state.people = state.people.filter(p => p.id !== id);
+      delete state.absences[id];
+      // limpiar incidencias (titular o sustituto), asignaciones manuales y
+      // anclajes de secuencia que referencien a esta persona
+      Object.keys(state.missed).forEach(d => {
+        const entry = state.missed[d];
+        if (!entry) return;
+        if (entry.person === id) { delete state.missed[d]; return; }
+        if (entry.substitute === id) entry.substitute = null;
+      });
+      Object.keys(state.dayOverrides).forEach(d => { if (state.dayOverrides[d] === id) delete state.dayOverrides[d]; });
+      state.sequenceAnchors = state.sequenceAnchors.filter(a => a.personId !== id);
+      renderAll();
+      showToast('Persona eliminada.');
+    }
+  );
+}
+
+let dragSourcePersonId = null;
+
+function renderSidebarPeople() {
+  const list = document.getElementById('people-list');
+  list.innerHTML = '';
+  state.people.forEach(person => {
+    const card = document.createElement('div');
+    card.className = 'person-card';
+    card.dataset.personId = person.id;
+
+    card.addEventListener('dragover', (e) => {
+      if (!dragSourcePersonId || dragSourcePersonId === person.id) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      card.classList.add('drag-over');
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+    card.addEventListener('drop', (e) => {
+      e.preventDefault();
+      card.classList.remove('drag-over');
+      const sourceId = dragSourcePersonId || e.dataTransfer.getData('text/plain');
+      if (!sourceId || sourceId === person.id) return;
+      reorderPeople(sourceId, person.id);
+    });
+
+    const row = document.createElement('div');
+    row.className = 'person-row';
+
+    const handle = document.createElement('span');
+    handle.className = 'drag-handle';
+    handle.textContent = '⠿';
+    handle.title = 'Arrastra para reordenar';
+    handle.setAttribute('aria-hidden', 'true');
+    handle.draggable = true;
+    handle.addEventListener('dragstart', (e) => {
+      dragSourcePersonId = person.id;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', person.id);
+    });
+    handle.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      dragSourcePersonId = null;
+      document.querySelectorAll('.person-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+    });
+
+    const colorInput = document.createElement('input');
+    colorInput.type = 'color';
+    colorInput.className = 'person-color-input';
+    colorInput.value = person.color;
+    colorInput.setAttribute('aria-label', 'Color de ' + person.name);
+    colorInput.addEventListener('input', () => {
+      // Actualiza el color en vivo mientras se arrastra el selector, sin
+      // reconstruir la barra lateral (eso es lo que hacía que el selector
+      // nativo del navegador se cerrara al mover el tono).
+      person.color = colorInput.value;
+      renderMonthsGrid();
+      renderLegend();
+      saveState();
+    });
+    colorInput.addEventListener('change', () => {
+      person.color = colorInput.value;
+      renderMonthsGrid();
+      renderLegend();
+      saveState();
+    });
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'person-name-input';
+    nameInput.value = person.name;
+    nameInput.maxLength = 40;
+    nameInput.setAttribute('aria-label', 'Nombre');
+    nameInput.addEventListener('change', () => {
+      const trimmed = nameInput.value.trim();
+      if (!trimmed) { nameInput.value = person.name; return; }
+      if (nameExists(trimmed, person.id)) {
+        showToast('Ya existe una persona con ese nombre.', true);
+        nameInput.value = person.name;
+        return;
+      }
+      person.name = trimmed;
+      renderAll();
+    });
+
+    row.appendChild(handle);
+    row.appendChild(colorInput);
+    row.appendChild(nameInput);
+    card.appendChild(row);
+
+    const absCount = (state.absences[person.id] ? state.absences[person.id].size : 0);
+    const countEl = document.createElement('div');
+    countEl.className = 'absence-count';
+    countEl.textContent = absCount + (absCount === 1 ? ' ausencia registrada' : ' ausencias registradas');
+    card.appendChild(countEl);
+
+    const actions = document.createElement('div');
+    actions.className = 'person-actions';
+    const absBtn = document.createElement('button');
+    absBtn.type = 'button';
+    absBtn.className = 'btn btn-outline btn-sm';
+    absBtn.textContent = 'Ausencias';
+    absBtn.addEventListener('click', () => openAbsenceModal(person.id));
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'btn btn-danger btn-sm';
+    delBtn.textContent = 'Eliminar';
+    delBtn.addEventListener('click', () => removePerson(person.id));
+    actions.appendChild(absBtn);
+    actions.appendChild(delBtn);
+    card.appendChild(actions);
+
+    list.appendChild(card);
+  });
+}
+
+function reorderPeople(sourceId, targetId) {
+  const fromIdx = state.people.findIndex(p => p.id === sourceId);
+  const toIdx = state.people.findIndex(p => p.id === targetId);
+  if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+  const [moved] = state.people.splice(fromIdx, 1);
+  state.people.splice(toIdx, 0, moved);
+  renderAll();
+  showToast('Orden actualizado: la rotación del calendario sigue el nuevo orden.');
+}
+
+/* ============================ 8. MODAL DE ACCIONES DE DÍA / INFO ============================ */
+
+function openInfoModal(title, sub) {
+  document.getElementById('info-modal-title').textContent = title;
+  document.getElementById('info-modal-sub').textContent = sub;
+  document.getElementById('info-overlay').hidden = false;
+}
+function closeInfoModal() { document.getElementById('info-overlay').hidden = true; }
+
+let currentDayModalDate = null;
+
+function openDayModal(iso, view) {
+  if (state.swapMode) { handleSwapTargetClick(iso, view); return; }
+  currentDayModalDate = iso;
+  renderDayModalContent(iso, view);
+  document.getElementById('day-overlay').hidden = false;
+}
+
+function renderDayModalContent(iso, view) {
+  const personId = view.final[iso];
+  const person = personId ? personById(personId) : null;
+  const flag = view.flags[iso] || {};
+  const hasAnchor = state.sequenceAnchors.some(a => a.date === iso);
+
+  document.getElementById('day-modal-title').textContent = formatLongDate(iso);
+  document.getElementById('day-modal-sub').textContent = person ? ('Asignado: ' + person.name) : 'Sin persona asignada.';
+
+  const badges = document.getElementById('day-modal-badges');
+  badges.innerHTML = '';
+  if (flag.missed) {
+    const missedPerson = personById(flag.missedPerson);
+    const subPerson = flag.substitute ? personById(flag.substitute) : null;
+    const b = document.createElement('span');
+    b.className = 'modal-badge missed';
+    b.textContent = '✕ No lavó ' + (missedPerson ? missedPerson.name : '—') +
+      (subPerson ? (' · Sustituyó ' + subPerson.name) : ' · Sin sustituto asignado') +
+      (flag.recoveryDate ? (' · Recupera el ' + formatDayMonth(flag.recoveryDate)) : '');
+    badges.appendChild(b);
+  }
+  if (flag.recovery) {
+    const b = document.createElement('span'); b.className = 'modal-badge recovery'; b.textContent = 'Recupera turno del ' + formatDayMonth(flag.recoveryOf);
+    badges.appendChild(b);
+  }
+  if (flag.swapWith) {
+    const thisOriginal = personById(view.base[iso]);
+    const otherOriginal = personById(view.base[flag.swapWith]);
+    const b = document.createElement('span'); b.className = 'modal-badge swap';
+    b.textContent = (thisOriginal && otherOriginal)
+      ? ('Cambio: ' + thisOriginal.name + ' ↔ ' + otherOriginal.name + ' (' + formatDayMonth(flag.swapWith) + ')')
+      : ('Intercambiado con el ' + formatDayMonth(flag.swapWith));
+    badges.appendChild(b);
+  }
+  if (flag.manualOverride) {
+    const b = document.createElement('span'); b.className = 'modal-badge manual'; b.textContent = 'Asignación manual de este día';
+    badges.appendChild(b);
+  }
+  if (hasAnchor) {
+    const b = document.createElement('span'); b.className = 'modal-badge manual'; b.textContent = 'Secuencia reiniciada desde este día';
+    badges.appendChild(b);
+  }
+
+  const actions = document.getElementById('day-modal-actions');
+  actions.innerHTML = '';
+
+  if (person) {
+    if (flag.missed) {
+      const subPerson = flag.substitute ? personById(flag.substitute) : null;
+      const summary = document.createElement('p');
+      summary.className = 'modal-sub';
+      summary.style.margin = '2px 0 8px';
+      summary.textContent = subPerson ? ('Sustituyó ese día: ' + subPerson.name) : 'Todavía no se ha indicado quién sustituyó.';
+      actions.appendChild(summary);
+
+      const editBtn = document.createElement('button');
+      editBtn.className = 'btn btn-outline';
+      editBtn.type = 'button';
+      editBtn.textContent = subPerson ? 'Cambiar sustituto' : 'Asignar sustituto';
+      editBtn.addEventListener('click', () => renderMissedPicker(iso, view));
+      actions.appendChild(editBtn);
+
+      const clearMissedBtn = document.createElement('button');
+      clearMissedBtn.className = 'btn btn-danger';
+      clearMissedBtn.type = 'button';
+      clearMissedBtn.textContent = 'Quitar incidencia';
+      clearMissedBtn.addEventListener('click', () => {
+        delete state.missed[iso];
+        renderAll();
+        renderDayModalContent(iso, computeYearView(state.year));
+        showToast('Incidencia eliminada.');
+      });
+      actions.appendChild(clearMissedBtn);
+    } else {
+      const missedBtn = document.createElement('button');
+      missedBtn.className = 'btn btn-outline';
+      missedBtn.type = 'button';
+      missedBtn.textContent = 'No ha lavado';
+      missedBtn.addEventListener('click', () => renderMissedPicker(iso, view));
+      actions.appendChild(missedBtn);
+    }
+
+    const swapBtn = document.createElement('button');
+    swapBtn.className = 'btn btn-outline';
+    swapBtn.type = 'button';
+    swapBtn.textContent = 'Cambiar con...';
+    swapBtn.addEventListener('click', () => { startSwap(iso); closeDayModal(); });
+    actions.appendChild(swapBtn);
+  }
+
+  // Asignación manual del día + reinicio de la secuencia de rotación
+  if (state.people.length > 0) {
+    const manualBox = document.createElement('div');
+    manualBox.className = 'manual-assign-box';
+
+    const manualLabel = document.createElement('label');
+    manualLabel.className = 'manual-assign-label';
+    manualLabel.textContent = 'Asignar manualmente este día';
+    manualBox.appendChild(manualLabel);
+
+    const select = document.createElement('select');
+    select.className = 'manual-assign-select';
+    const autoOpt = document.createElement('option');
+    autoOpt.value = '';
+    autoOpt.textContent = '— Automático (reparto normal) —';
+    select.appendChild(autoOpt);
+    state.people.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      select.appendChild(opt);
+    });
+    const anchorHere = state.sequenceAnchors.find(a => a.date === iso);
+    select.value = state.dayOverrides[iso] || (anchorHere ? anchorHere.personId : '');
+
+    const seqRow = document.createElement('label');
+    seqRow.className = 'manual-assign-checkbox-row';
+    const seqCheck = document.createElement('input');
+    seqCheck.type = 'checkbox';
+    seqCheck.checked = !!anchorHere;
+    seqRow.appendChild(seqCheck);
+    seqRow.appendChild(document.createTextNode(' Iniciar secuencia desde esta persona (reordena los turnos a partir de este día)'));
+
+    manualBox.appendChild(select);
+    manualBox.appendChild(seqRow);
+
+    const saveManualBtn = document.createElement('button');
+    saveManualBtn.className = 'btn btn-solid btn-sm';
+    saveManualBtn.type = 'button';
+    saveManualBtn.style.marginTop = '8px';
+    saveManualBtn.textContent = 'Guardar asignación';
+    saveManualBtn.addEventListener('click', () => {
+      saveDayAssignment(iso, select.value || null, seqCheck.checked);
+    });
+    manualBox.appendChild(saveManualBtn);
+
+    actions.appendChild(manualBox);
+  }
+
+  const hasModification = flag.missed || flag.recovery || flag.swapWith || flag.manualOverride || hasAnchor;
+  if (hasModification) {
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'btn btn-danger';
+    resetBtn.type = 'button';
+    resetBtn.textContent = 'Restablecer día';
+    resetBtn.addEventListener('click', () => { resetDayModifications(iso); closeDayModal(); });
+    actions.appendChild(resetBtn);
+  }
+}
+
+function renderMissedPicker(iso, view) {
+  const personId = view.final[iso];
+  const person = personId ? personById(personId) : null;
+  const actions = document.getElementById('day-modal-actions');
+  actions.innerHTML = '';
+
+  const label = document.createElement('p');
+  label.className = 'modal-sub';
+  label.style.margin = '0 0 8px';
+  label.textContent = person ? ('¿Quién lavó en lugar de ' + person.name + ' ese día? (opcional)') : '¿Quién lavó ese día?';
+  actions.appendChild(label);
+
+  const select = document.createElement('select');
+  select.className = 'manual-assign-select';
+  const noneOpt = document.createElement('option');
+  noneOpt.value = '';
+  noneOpt.textContent = '— Sin sustituto / pendiente —';
+  select.appendChild(noneOpt);
+  state.people.forEach(p => {
+    if (p.id === personId) return; // no tiene sentido sustituirse a sí mismo
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name;
+    select.appendChild(opt);
+  });
+  const existing = state.missed[iso];
+  if (existing && existing.substitute) select.value = existing.substitute;
+  actions.appendChild(select);
+
+  const confirmBtn = document.createElement('button');
+  confirmBtn.className = 'btn btn-solid';
+  confirmBtn.type = 'button';
+  confirmBtn.style.marginTop = '8px';
+  confirmBtn.textContent = 'Registrar incidencia';
+  confirmBtn.addEventListener('click', () => {
+    markMissed(iso, personId, select.value || null);
+    closeDayModal();
+  });
+  actions.appendChild(confirmBtn);
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn btn-outline';
+  cancelBtn.type = 'button';
+  cancelBtn.textContent = 'Cancelar';
+  cancelBtn.addEventListener('click', () => renderDayModalContent(iso, computeYearView(state.year)));
+  actions.appendChild(cancelBtn);
+}
+
+function closeDayModal() { document.getElementById('day-overlay').hidden = true; currentDayModalDate = null; }
+
+function markMissed(iso, personId, substituteId) {
+  state.missed[iso] = { person: personId, substitute: substituteId || null };
+  renderAll();
+  showToast(substituteId ? 'Incidencia registrada con sustituto.' : 'Incidencia registrada.');
+}
+
+function saveDayAssignment(iso, personId, startSequence) {
+  if (!personId) {
+    delete state.dayOverrides[iso];
+    state.sequenceAnchors = state.sequenceAnchors.filter(a => a.date !== iso);
+    renderAll();
+    showToast('Este día vuelve al reparto automático.');
+    closeDayModal();
+    return;
+  }
+  if (startSequence) {
+    state.sequenceAnchors = state.sequenceAnchors.filter(a => a.date !== iso);
+    state.sequenceAnchors.push({ date: iso, personId: personId });
+    delete state.dayOverrides[iso];
+    renderAll();
+    showToast('Turno asignado y secuencia reiniciada a partir de este día.');
+  } else {
+    state.dayOverrides[iso] = personId;
+    state.sequenceAnchors = state.sequenceAnchors.filter(a => a.date !== iso);
+    renderAll();
+    showToast('Turno asignado manualmente para este día.');
+  }
+  closeDayModal();
+}
+
+function resetDayModifications(iso) {
+  let changed = false;
+  if (state.missed[iso]) { delete state.missed[iso]; changed = true; }
+  // si esta fecha es el día de recuperación de otra incidencia, eliminar esa incidencia también
+  Object.keys(state.missed).forEach(d => {
+    const view = computeYearView(Number(d.slice(0,4)));
+    if (view.flags[d] && view.flags[d].recoveryDate === iso) { delete state.missed[d]; changed = true; }
+  });
+  const beforeSwaps = state.swaps.length;
+  state.swaps = state.swaps.filter(sw => sw.a !== iso && sw.b !== iso);
+  if (state.swaps.length !== beforeSwaps) changed = true;
+  if (state.dayOverrides[iso]) { delete state.dayOverrides[iso]; changed = true; }
+  const beforeAnchors = state.sequenceAnchors.length;
+  state.sequenceAnchors = state.sequenceAnchors.filter(a => a.date !== iso);
+  if (state.sequenceAnchors.length !== beforeAnchors) changed = true;
+  renderAll();
+  showToast(changed ? 'Turno restablecido a la asignación automática.' : 'No había modificaciones que restablecer.');
+}
+
+/* ============================ 9. PANEL DE AUSENCIAS ============================ */
+
+function openAbsenceModal(personId) {
+  state.activeAbsencePersonId = personId;
+  const person = personById(personId);
+  const existing = state.absences[personId] ? new Set(state.absences[personId]) : new Set();
+  state.activeAbsenceSelection = existing;
+  document.getElementById('absence-modal-title').textContent = 'Ausencias de ' + person.name;
+  document.getElementById('absence-year-label').textContent = state.year;
+  renderAbsenceMonths();
+  document.getElementById('absence-overlay').hidden = false;
+}
+
+function closeAbsenceModal(save) {
+  if (save && state.activeAbsencePersonId) {
+    state.absences[state.activeAbsencePersonId] = state.activeAbsenceSelection;
+  }
+  state.activeAbsencePersonId = null;
+  state.activeAbsenceSelection = null;
+  document.getElementById('absence-overlay').hidden = true;
+  renderAll();
+}
+
+function renderAbsenceMonths() {
+  const container = document.getElementById('absence-months');
+  container.innerHTML = '';
+  const year = state.year;
+  let countInYear = 0;
+  state.activeAbsenceSelection.forEach(d => { if (d.slice(0,4) === String(year)) countInYear++; });
+  document.getElementById('absence-count-line').innerHTML =
+    '<strong>' + countInYear + '</strong> día(s) seleccionados en ' + year + ' &nbsp;·&nbsp; ' +
+    state.activeAbsenceSelection.size + ' en total (todos los años)';
+
+  for (let m = 0; m < 12; m++) {
+    const box = document.createElement('div');
+    box.className = 'mini-month';
+    const title = document.createElement('div');
+    title.className = 'mini-month-title';
+    title.textContent = MONTH_LABELS[m] + ' ' + year;
+    box.appendChild(title);
+
+    const dowRow = document.createElement('div');
+    dowRow.className = 'mini-dow';
+    DOW_LABELS.forEach(l => { const s = document.createElement('span'); s.textContent = l[0]; dowRow.appendChild(s); });
+    box.appendChild(dowRow);
+
+    const daysBox = document.createElement('div');
+    daysBox.className = 'mini-days';
+    const firstDow = mondayIndexOfWeekday(new Date(Date.UTC(year, m, 1)).getUTCDay());
+    for (let i = 0; i < firstDow; i++) {
+      const e = document.createElement('button'); e.className = 'mini-day empty'; e.disabled = true;
+      daysBox.appendChild(e);
+    }
+    const total = daysInMonth(year, m);
+    for (let day = 1; day <= total; day++) {
+      const iso = isoFromParts(year, m + 1, day);
+      const dow = parseISOToUTCDate(iso).getUTCDay();
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'mini-day' + ((dow === 0 || dow === 6) ? ' weekend-day' : '');
+      btn.textContent = day;
+      if (state.activeAbsenceSelection.has(iso)) btn.classList.add('selected');
+      btn.addEventListener('click', () => {
+        if (state.activeAbsenceSelection.has(iso)) state.activeAbsenceSelection.delete(iso);
+        else state.activeAbsenceSelection.add(iso);
+        renderAbsenceMonths();
+      });
+      daysBox.appendChild(btn);
+    }
+    box.appendChild(daysBox);
+    container.appendChild(box);
+  }
+}
+
+function addAbsenceRange() {
+  const startVal = document.getElementById('range-start').value;
+  const endVal = document.getElementById('range-end').value;
+  if (!startVal || !endVal) { showToast('Indica una fecha de inicio y de fin.', true); return; }
+  let start = parseISOToUTCDate(startVal);
+  const end = parseISOToUTCDate(endVal);
+  if (start > end) { showToast('La fecha de inicio debe ser anterior a la de fin.', true); return; }
+  let added = 0;
+  let cursor = start;
+  while (cursor <= end) {
+    state.activeAbsenceSelection.add(toISO(cursor));
+    cursor = addDaysUTC(cursor, 1);
+    added++;
+    if (added > 800) break;
+  }
+  renderAbsenceMonths();
+  showToast('Rango añadido a la selección.');
+}
+
+function clearAbsencesForYear() {
+  const year = state.year;
+  Array.from(state.activeAbsenceSelection).forEach(d => { if (d.slice(0,4) === String(year)) state.activeAbsenceSelection.delete(d); });
+  renderAbsenceMonths();
+}
+
+/* ============================ 10. INTERCAMBIOS ("CAMBIAR CON") ============================ */
+
+function startSwap(sourceDate) {
+  state.swapMode = { sourceDate };
+  document.getElementById('swap-banner').hidden = false;
+  document.getElementById('swap-banner-text').textContent =
+    'Selecciona otro día para intercambiar el turno del ' + formatDayMonth(sourceDate) + '.';
+  renderAll();
+}
+
+function cancelSwap() {
+  state.swapMode = null;
+  document.getElementById('swap-banner').hidden = true;
+}
+
+function handleSwapTargetClick(targetDate, view) {
+  const sourceDate = state.swapMode.sourceDate;
+  if (targetDate === sourceDate) { showToast('Selecciona un día distinto al de origen.', true); return; }
+  const targetHoliday = view.holidayMap[targetDate];
+  const targetDow = parseISOToUTCDate(targetDate).getUTCDay();
+  if (targetHoliday || targetDow === 0 || targetDow === 6) {
+    showToast('No puedes intercambiar con un festivo o un fin de semana.', true);
+    return;
+  }
+  state.swaps.push({ a: sourceDate, b: targetDate });
+  cancelSwap();
+  renderAll();
+  showToast('Turno cambiado correctamente.');
+}
+
+/* ============================ 11. RESTABLECER DATOS ============================ */
+
+function handleResetAllClick() {
+  openConfirm(
+    'Borrar todos los datos',
+    '¿Seguro que quieres borrar toda la configuración (personas, colores, ausencias, incidencias e intercambios) y volver al estado inicial vacío? Esta acción no se puede deshacer. Si quieres conservar una copia, usa antes «💾 GUARDAR CAMBIOS».',
+    () => resetAllData()
+  );
+}
+
+/* ============================ 12. EXPORTACIÓN A PDF ============================ */
+
+async function exportPDF() {
+  if (state.people.length === 0) { showToast('Añade al menos una persona antes de exportar.', true); return; }
+  const btn = document.getElementById('btn-export-pdf');
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Generando PDF...';
+  const root = document.getElementById('print-root');
+  root.classList.add('pdf-capture');
+  try {
+    await new Promise(r => setTimeout(r, 60)); // dejar que el navegador aplique la clase
+    const canvas = await html2canvas(root, { scale: 2, backgroundColor: '#F1F4EF', useCORS: true });
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 8;
+    const availW = pageWidth - margin * 2;
+    const availH = pageHeight - margin * 2;
+    const imgRatio = canvas.width / canvas.height;
+    let renderW = availW;
+    let renderH = renderW / imgRatio;
+    if (renderH > availH) { renderH = availH; renderW = renderH * imgRatio; }
+    const offsetX = (pageWidth - renderW) / 2;
+    const offsetY = (pageHeight - renderH) / 2;
+    const imgData = canvas.toDataURL('image/png');
+    pdf.addImage(imgData, 'PNG', offsetX, offsetY, renderW, renderH);
+    pdf.save('Calendario_lavado_tazas_' + state.year + '.pdf');
+    showToast('PDF descargado.');
+  } catch (err) {
+    showToast('No se pudo generar el PDF. Revisa la conexión (se necesita para cargar jsPDF/html2canvas).', true);
+  } finally {
+    root.classList.remove('pdf-capture');
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
+}
+
+/* ============================ 13. TOASTS Y CONFIRMACIONES ============================ */
+
+function showToast(message, isWarn) {
+  const container = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast' + (isWarn ? ' toast-warn' : '');
+  t.textContent = message;
+  container.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => t.remove(), 300);
+  }, 2600);
+}
+
+let confirmCallback = null;
+function openConfirm(title, message, onConfirm) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-message').textContent = message;
+  confirmCallback = onConfirm;
+  document.getElementById('confirm-overlay').hidden = false;
+}
+function closeConfirm() {
+  document.getElementById('confirm-overlay').hidden = true;
+  confirmCallback = null;
+}
+
+/* ============================ 14. INICIALIZACIÓN ============================ */
+
+function attachEventListeners() {
+  document.getElementById('year-select').addEventListener('change', (e) => {
+    state.year = Number(e.target.value);
+    cancelSwap();
+    renderAll();
+  });
+
+  document.getElementById('btn-toggle-people').addEventListener('click', () => {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.style.display = (sidebar.style.display === 'none') ? '' : 'none';
+  });
+
+  document.getElementById('btn-export-pdf').addEventListener('click', exportPDF);
+  document.getElementById('btn-save-html').addEventListener('click', saveHtmlFile);
+  document.getElementById('btn-reset').addEventListener('click', handleResetAllClick);
+
+  document.getElementById('btn-add-person').addEventListener('click', () => {
+    const input = document.getElementById('new-person-name');
+    addPerson(input.value);
+    input.value = '';
+    input.focus();
+  });
+  document.getElementById('new-person-name').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('btn-add-person').click();
+  });
+
+  document.getElementById('btn-cancel-swap').addEventListener('click', () => { cancelSwap(); renderAll(); });
+
+  document.getElementById('btn-close-day-modal').addEventListener('click', closeDayModal);
+  document.getElementById('day-overlay').addEventListener('click', (e) => { if (e.target.id === 'day-overlay') closeDayModal(); });
+
+  document.getElementById('btn-close-info-modal').addEventListener('click', closeInfoModal);
+  document.getElementById('info-overlay').addEventListener('click', (e) => { if (e.target.id === 'info-overlay') closeInfoModal(); });
+
+  document.getElementById('btn-save-absences').addEventListener('click', () => closeAbsenceModal(true));
+  document.getElementById('absence-overlay').addEventListener('click', (e) => { if (e.target.id === 'absence-overlay') closeAbsenceModal(true); });
+  document.getElementById('btn-add-range').addEventListener('click', addAbsenceRange);
+  document.getElementById('btn-clear-absences').addEventListener('click', clearAbsencesForYear);
+
+  document.getElementById('btn-confirm-cancel').addEventListener('click', closeConfirm);
+  document.getElementById('btn-confirm-ok').addEventListener('click', () => {
+    const cb = confirmCallback;
+    closeConfirm();
+    if (cb) cb();
+  });
+  document.getElementById('confirm-overlay').addEventListener('click', (e) => { if (e.target.id === 'confirm-overlay') closeConfirm(); });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (state.swapMode) { cancelSwap(); renderAll(); }
+      if (!document.getElementById('day-overlay').hidden) closeDayModal();
+      if (!document.getElementById('info-overlay').hidden) closeInfoModal();
+      if (!document.getElementById('confirm-overlay').hidden) closeConfirm();
+    }
+  });
+}
+
+function init() {
+  loadState();
+  attachEventListeners();
+  renderAll();
+}
+
+init();
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+</script>
+
+</body></html>
