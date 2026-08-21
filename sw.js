@@ -1,11 +1,8 @@
-const CACHE = 'tazas-v1';
+const CACHE = 'tazas-v2';
+const CORE = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(cache =>
-      cache.addAll(['./', './index.html', './manifest.json']).catch(() => {})
-    )
-  );
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE).catch(() => {})));
   self.skipWaiting();
 });
 
@@ -19,7 +16,8 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
-  );
+  const req = e.request;
+  // Solo gestionamos GET del mismo origen; el resto (Firebase, CDNs, POST) pasa directo
+  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  e.respondWith(fetch(req).catch(() => caches.match(req)));
 });

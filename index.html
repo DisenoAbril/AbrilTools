@@ -11,6 +11,8 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
 :root{
   --bg:#F1F4EF;
@@ -1994,6 +1996,93 @@ function init() {
 }
 
 init();
+</script>
+
+<!-- ============================ SINCRONIZACIÓN EN LA NUBE (Firebase) ============================
+     Guarda TODO el estado en un único documento de Firestore y se suscribe a
+     sus cambios en tiempo real. Cualquiera con el enlace ve y edita lo mismo.
+     ============================================================================================= -->
+<script>
+(function () {
+  const firebaseConfig = {
+    apiKey: "AIzaSyClw54cp88bGxgd1AwD87tFOHrLXBvR2Cc",
+    authDomain: "lavado-tazas.firebaseapp.com",
+    projectId: "lavado-tazas",
+    storageBucket: "lavado-tazas.firebasestorage.app",
+    messagingSenderId: "705237551848",
+    appId: "1:705237551848:web:c4205dc3743a3402d6d75d"
+  };
+
+  // Indicador de estado (esquina inferior)
+  const badge = document.createElement('div');
+  badge.style.cssText = 'position:fixed;bottom:12px;right:12px;z-index:9999;font:500 12px/1.2 system-ui,sans-serif;padding:7px 12px;border-radius:999px;background:#20291F;color:#F4F7F3;opacity:.92;box-shadow:0 2px 8px rgba(0,0,0,.2);transition:opacity .3s;pointer-events:none;';
+  badge.textContent = 'Conectando…';
+  document.body.appendChild(badge);
+  let hideTimer = null;
+  function setStatus(msg, color) {
+    badge.textContent = msg;
+    badge.style.background = color || '#20291F';
+    badge.style.opacity = '.92';
+    if (hideTimer) clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => { badge.style.opacity = '0'; }, 2500);
+  }
+
+  if (typeof firebase === 'undefined') {
+    setStatus('Sin conexión con la nube', '#8a3b3b');
+    return; // La app sigue funcionando en local aunque falle Firebase
+  }
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const docRef = db.collection('calendars').doc('tazas');
+
+  let applyingRemote = false;   // evita reenviar mientras aplicamos un cambio remoto
+  let lastSyncedJSON = null;    // último JSON conocido (para no reescribir lo mismo)
+  let pushTimer = null;
+
+  // Envolvemos saveState: mantiene el guardado local y además sube a la nube
+  const originalSaveState = window.saveState;
+  window.saveState = function () {
+    try { originalSaveState(); } catch (e) {}
+    if (applyingRemote) return;      // no reenviar ecos de un cambio remoto
+    schedulePush();
+  };
+
+  function schedulePush() {
+    if (pushTimer) clearTimeout(pushTimer);
+    pushTimer = setTimeout(pushNow, 400);  // agrupa ráfagas de cambios
+  }
+
+  function pushNow() {
+    try {
+      const json = JSON.stringify(buildStateSnapshot());
+      if (json === lastSyncedJSON) return;
+      lastSyncedJSON = json;
+      docRef.set({ data: json, updatedAt: Date.now() })
+        .then(() => setStatus('Guardado ✓', '#3E6259'))
+        .catch(() => setStatus('Error al guardar', '#8a3b3b'));
+    } catch (e) {}
+  }
+
+  // Suscripción en tiempo real
+  docRef.onSnapshot(function (doc) {
+    if (!doc.exists) { pushNow(); return; }        // primera vez: sembramos con lo local
+    const remote = doc.data();
+    const json = remote && remote.data;
+    if (!json || json === lastSyncedJSON) return;  // sin cambios o eco propio
+    lastSyncedJSON = json;
+    try {
+      const obj = JSON.parse(json);
+      applyingRemote = true;
+      applyStateSnapshot(obj);
+      renderAll();
+      applyingRemote = false;
+      setStatus('Sincronizado ✓', '#3E6259');
+    } catch (e) { applyingRemote = false; }
+  }, function () {
+    setStatus('Sin conexión con la nube', '#8a3b3b');
+  });
+})();
 </script>
 
 <script>
