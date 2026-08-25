@@ -237,6 +237,7 @@ h1,h2,h3{margin:0;font-family:var(--font-display);font-weight:600;}
   font-weight:600;
   box-shadow:var(--shadow-sm);
 }
+.notice-banner[hidden], .swap-banner[hidden]{display:none;}
 
 #print-root{background:transparent;}
 .cal-title-block{margin-bottom:16px;}
@@ -462,11 +463,12 @@ h1,h2,h3{margin:0;font-family:var(--font-display);font-weight:600;}
 </head>
 <body>
 
-<!-- ESTADO INCRUSTADO: al pulsar "GUARDAR CAMBIOS" se regenera este bloque con
-     el estado actual de la aplicación (personas, colores, ausencias, incidencias,
-     intercambios, año...). Si este bloque contiene datos ("__hasData": true), la
-     aplicación se abre siempre con ese estado, sea cual sea el ordenador donde se
-     abra el archivo. Si está vacío, se usa localStorage como respaldo local. -->
+<!-- ESTADO INCRUSTADO: datos iniciales de arranque (personas, colores, ausencias,
+     incidencias, intercambios, año...). Sirve como semilla mientras Firebase
+     entrega el estado compartido en tiempo real, que es la fuente de verdad. Si
+     Firebase no está disponible, se usa localStorage como respaldo local. -->
+<!-- Se mantiene por compatibilidad; ya no se regenera desde la interfaz. -->
+<!-- __hasData indica si trae datos de arranque. -->
 <script type="application/json" id="embedded-state">{"__hasData":true,"people":[{"id":"p_mssn7hwwc0gub","name":"Dani","color":"#a6e8b3"},{"id":"p_mssn7kmnoi3u7","name":"Noa","color":"#ebb2e0"},{"id":"p_mssn7sfrfpmmg","name":"Andrés","color":"#a0c0f3"},{"id":"p_mssn7ucvqfo1j","name":"David","color":"#f7cb8d"}],"absences":{"p_mssn7ucvqfo1j":[],"p_mssn7sfrfpmmg":["2026-11-09","2026-11-10","2026-11-02","2026-11-03","2026-11-04","2026-11-05","2026-11-06"],"p_mssn7kmnoi3u7":["2026-08-31","2026-09-01","2026-09-02","2026-09-03","2026-09-04","2026-10-05","2026-10-06","2026-10-07","2026-10-08","2026-10-09"]},"missed":{},"swaps":[],"dayOverrides":{},"sequenceAnchors":[{"date":"2026-08-13","personId":"p_mssn7sfrfpmmg"}],"year":2026}</script>
 
 <div id="toast-container" aria-live="polite"></div>
@@ -486,8 +488,8 @@ h1,h2,h3{margin:0;font-family:var(--font-display);font-weight:600;}
   <div class="topbar-controls">
     <select id="year-select" class="year-select" aria-label="Año"><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option><option value="2030">2030</option><option value="2031">2031</option><option value="2032">2032</option></select>
     <button class="btn btn-ghost-light" id="btn-toggle-people" type="button">Personas</button>
+    <button class="btn btn-ghost-light" id="btn-notice" type="button">📌 Aviso</button>
     <button class="btn btn-primary-light" id="btn-export-pdf" type="button">Guardar PDF</button>
-    <button class="btn btn-primary-light" id="btn-save-html" type="button">💾 GUARDAR CAMBIOS</button>
     <button class="btn btn-ghost-light" id="btn-reset" type="button">🗑 BORRAR DATOS</button>
   </div>
 </header>
@@ -780,20 +782,19 @@ const state = {
   dayOverrides: {},            // { 'YYYY-MM-DD': personId }  asignación manual puntual de un día
   sequenceAnchors: [],         // [{date:'YYYY-MM-DD', personId}]  reinicia el orden de rotación desde ese día
   year: CURRENT_REAL_YEAR,
+  notice: '',                  // aviso compartido que se muestra en la barra crema
   swapMode: null,              // { sourceDate } mientras se elige el día de intercambio
   activeAbsencePersonId: null,
   activeAbsenceSelection: null // Set de fechas en edición dentro del modal
 };
 
-/* ============================ 4. ESTADO: HTML INCRUSTADO + LOCALSTORAGE ============================
-   Fuente de datos para COMPARTIR el calendario entre ordenadores: el bloque
-   <script id="embedded-state"> incrustado en este mismo archivo HTML. Al
-   pulsar "GUARDAR CAMBIOS" se descarga una copia de este HTML con ese bloque
-   actualizado con el estado actual, así que abrir ese archivo en cualquier
-   otro ordenador reproduce exactamente el mismo estado.
-   localStorage se mantiene solo como comodidad local (autoguardado mientras
-   se trabaja en este mismo navegador, por si se recarga la página sin haber
-   pulsado "GUARDAR CAMBIOS").
+/* ============================ 4. ESTADO: FIREBASE + LOCALSTORAGE ============================
+   El calendario se COMPARTE en tiempo real mediante Firebase (ver el bloque de
+   sincronización al final del archivo): todo el estado se guarda en un único
+   documento de Firestore y se sincroniza entre todos los dispositivos.
+   El bloque <script id="embedded-state"> queda como semilla de arranque, y
+   localStorage como respaldo local de este navegador (autoguardado mientras se
+   trabaja, por si se recarga la página o falla la conexión).
    ========================================================================= */
 
 const LS_KEYS = {
@@ -806,7 +807,8 @@ const LS_KEYS = {
 
 const LS_KEYS_EXTRA = {
   dayOverrides: 'tazas_overrides_v1',
-  sequenceAnchors: 'tazas_anchors_v1'
+  sequenceAnchors: 'tazas_anchors_v1',
+  notice: 'tazas_notice_v1'
 };
 
 /* Normaliza el formato de "missed": versiones anteriores guardaban solo el id
@@ -836,7 +838,8 @@ function buildStateSnapshot() {
     swaps: state.swaps,
     dayOverrides: state.dayOverrides,
     sequenceAnchors: state.sequenceAnchors,
-    year: state.year
+    year: state.year,
+    notice: state.notice || ''
   };
 }
 
@@ -851,6 +854,7 @@ function applyStateSnapshot(obj) {
   state.sequenceAnchors = Array.isArray(obj.sequenceAnchors) ? obj.sequenceAnchors : [];
   const y = Number(obj.year);
   state.year = (y && y >= YEAR_RANGE.min && y <= YEAR_RANGE.max) ? y : CURRENT_REAL_YEAR;
+  state.notice = typeof obj.notice === 'string' ? obj.notice : '';
 }
 
 function readEmbeddedState() {
@@ -877,6 +881,7 @@ function saveState() {
     localStorage.setItem(LS_KEYS.year, JSON.stringify(state.year));
     localStorage.setItem(LS_KEYS_EXTRA.dayOverrides, JSON.stringify(state.dayOverrides));
     localStorage.setItem(LS_KEYS_EXTRA.sequenceAnchors, JSON.stringify(state.sequenceAnchors));
+    localStorage.setItem(LS_KEYS_EXTRA.notice, JSON.stringify(state.notice || ''));
   } catch (err) {
     // El almacenamiento local es solo una comodidad; si falla, no pasa nada:
     // el estado sigue disponible en memoria y se puede guardar como HTML.
@@ -904,11 +909,13 @@ function loadState() {
     state.swaps = JSON.parse(localStorage.getItem(LS_KEYS.swaps) || '[]');
     state.dayOverrides = JSON.parse(localStorage.getItem(LS_KEYS_EXTRA.dayOverrides) || '{}');
     state.sequenceAnchors = JSON.parse(localStorage.getItem(LS_KEYS_EXTRA.sequenceAnchors) || '[]');
+    state.notice = JSON.parse(localStorage.getItem(LS_KEYS_EXTRA.notice) || '""');
     const storedYear = JSON.parse(localStorage.getItem(LS_KEYS.year) || 'null');
     state.year = storedYear && storedYear >= YEAR_RANGE.min && storedYear <= YEAR_RANGE.max ? storedYear : CURRENT_REAL_YEAR;
   } catch (err) {
     state.people = []; state.absences = {}; state.missed = {}; state.swaps = [];
     state.dayOverrides = {}; state.sequenceAnchors = []; state.year = CURRENT_REAL_YEAR;
+    state.notice = '';
   }
 }
 
@@ -920,6 +927,7 @@ function resetAllData() {
   localStorage.removeItem(LS_KEYS.year);
   localStorage.removeItem(LS_KEYS_EXTRA.dayOverrides);
   localStorage.removeItem(LS_KEYS_EXTRA.sequenceAnchors);
+  localStorage.removeItem(LS_KEYS_EXTRA.notice);
   state.people = [];
   state.absences = {};
   state.missed = {};
@@ -927,34 +935,12 @@ function resetAllData() {
   state.dayOverrides = {};
   state.sequenceAnchors = [];
   state.year = CURRENT_REAL_YEAR;
+  state.notice = '';
   renderAll();
   showToast('Datos borrados. La aplicación ha vuelto al estado inicial.');
 }
 
 /* ---- Generar y descargar un HTML con el estado actual incrustado ---- */
-function saveHtmlFile() {
-  try {
-    const snapshot = buildStateSnapshot();
-    const json = JSON.stringify(snapshot);
-    const docClone = document.documentElement.cloneNode(true);
-    const stateScript = docClone.querySelector('#embedded-state');
-    if (stateScript) stateScript.textContent = json;
-    const htmlStr = '<!DOCTYPE html>\n' + docClone.outerHTML + '\n';
-    const blob = new Blob([htmlStr], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'calendario_tazas_' + state.year + '.html';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-    showToast('Archivo HTML guardado con todos los datos incrustados.');
-  } catch (err) {
-    showToast('No se pudo generar el archivo HTML para guardar.', true);
-  }
-}
-
 /* ============================ 5. ALGORITMO DE ASIGNACIÓN ============================ */
 
 function generateWorkdays(year, holidayMap) {
@@ -1086,6 +1072,7 @@ function mondayIndexOfWeekday(jsDay) { return jsDay === 0 ? 6 : jsDay - 1; } // 
 function renderAll() {
   populateYearSelect();
   renderNoticeBanner();
+  renderSwapBanner();
   renderSidebarPeople();
   renderEmptyState();
   renderCalendarTitle();
@@ -1107,12 +1094,35 @@ function populateYearSelect() {
   }
 }
 
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function renderNoticeBanner() {
   const el = document.getElementById('notice-banner');
+  if (!el) return;
+  const custom = (state.notice || '').trim();
   const { isOfficial } = getHolidaysForYear(state.year);
+  let html = '';
+  if (custom) {
+    html += '<span>📌 ' + escapeHtml(custom) + '</span>';
+  }
   if (!isOfficial) {
+    html += (html ? '<br>' : '') + '<strong>⚠ Festivos estimados para ' + state.year + '.</strong>&nbsp;Los festivos nacionales y de Semana Santa se han calculado automáticamente; el festivo autonómico y los locales de Ourense son una estimación. Verifícalos con el Concello de Ourense antes de imprimir.';
+  }
+  if (html) { el.innerHTML = html; el.hidden = false; }
+  else { el.hidden = true; }
+}
+
+function renderSwapBanner() {
+  const el = document.getElementById('swap-banner');
+  if (!el) return;
+  if (state.swapMode) {
     el.hidden = false;
-    el.innerHTML = '<strong>⚠ Festivos estimados para ' + state.year + '.</strong>&nbsp;Los festivos nacionales y de Semana Santa se han calculado automáticamente; el festivo autonómico y los locales de Ourense son una estimación. Verifícalos con el Concello de Ourense antes de imprimir.';
+    const txt = document.getElementById('swap-banner-text');
+    if (txt) txt.textContent = 'Selecciona otro día para intercambiar el turno del ' + formatDayMonth(state.swapMode.sourceDate) + '.';
   } else {
     el.hidden = true;
   }
@@ -1733,7 +1743,8 @@ function openAbsenceModal(personId) {
   const existing = state.absences[personId] ? new Set(state.absences[personId]) : new Set();
   state.activeAbsenceSelection = existing;
   document.getElementById('absence-modal-title').textContent = 'Ausencias de ' + person.name;
-  document.getElementById('absence-year-label').textContent = state.year;
+  const absYearLabel = document.getElementById('absence-year-label');
+  if (absYearLabel) absYearLabel.textContent = state.year;
   renderAbsenceMonths();
   document.getElementById('absence-overlay').hidden = false;
 }
@@ -1859,7 +1870,7 @@ function handleSwapTargetClick(targetDate, view) {
 function handleResetAllClick() {
   openConfirm(
     'Borrar todos los datos',
-    '¿Seguro que quieres borrar toda la configuración (personas, colores, ausencias, incidencias e intercambios) y volver al estado inicial vacío? Esta acción no se puede deshacer. Si quieres conservar una copia, usa antes «💾 GUARDAR CAMBIOS».',
+    '¿Seguro que quieres borrar toda la configuración (personas, colores, ausencias, incidencias e intercambios) y volver al estado inicial vacío? Esta acción no se puede deshacer y, al estar sincronizado, borrará los datos para todo el equipo.',
     () => resetAllData()
   );
 }
@@ -1944,8 +1955,18 @@ function attachEventListeners() {
     sidebar.style.display = (sidebar.style.display === 'none') ? '' : 'none';
   });
 
+  const btnNotice = document.getElementById('btn-notice');
+  if (btnNotice) btnNotice.addEventListener('click', () => {
+    const current = state.notice || '';
+    const val = window.prompt('Escribe un aviso para todo el equipo (déjalo vacío para quitarlo):', current);
+    if (val === null) return; // cancelado
+    state.notice = val.trim();
+    renderNoticeBanner();
+    saveState();
+    showToast(state.notice ? 'Aviso publicado para todos.' : 'Aviso eliminado.');
+  });
+
   document.getElementById('btn-export-pdf').addEventListener('click', exportPDF);
-  document.getElementById('btn-save-html').addEventListener('click', saveHtmlFile);
   document.getElementById('btn-reset').addEventListener('click', handleResetAllClick);
 
   document.getElementById('btn-add-person').addEventListener('click', () => {
